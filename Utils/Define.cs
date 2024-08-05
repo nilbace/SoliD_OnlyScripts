@@ -19,7 +19,7 @@ public enum E_CharNameKor
 
 public enum E_CardType { Attack, Defence, Skill }
 public enum E_CardColor { Magenta, Cyan, Yellow, Black }
-public enum E_CardTier { Basic,Normal, Rare }
+public enum E_CardTier { Basic,Normal, Rare, InBattle }
 public enum E_TargetType
 {
     None,

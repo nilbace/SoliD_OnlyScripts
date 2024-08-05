@@ -39,14 +39,7 @@ public class CardEffectManager : MonoBehaviour
             // 대상 타겟들을 받아오기
             var targets = GameManager.Battle.GetProperUnits(NowCardData.CardOwner, cardEffectData.TargetType);
 
-            // 카드 효과 발동 도중에 적이 죽어서 없어진 경우
-            if (targets.Count == 0)
-            {
-                Debug.Log("탈출");
-                return; // 시퀀스를 중단
-            }
-
-            // 각 효과 타입마다 알맞은 효과를 대상에게 적용
+             // 각 효과 타입마다 알맞은 효과를 대상에게 적용
             switch (cardEffectData.CardEffectType)
             {
                 case E_EffectType.Damage:
@@ -328,7 +321,8 @@ public class CardEffectManager : MonoBehaviour
                     break;
             }
 
-            if (shouldBreak) break;
+            //탈출용 플래그 사용
+            if (shouldBreak) { Debug.Log("탈출");  break; }
         }
 
         // 색 묻히기
@@ -354,9 +348,6 @@ public class CardEffectManager : MonoBehaviour
             HandManager.Inst.DiscardCardFromHand(gameObject);
             CardMouseDetection.IsUsing = false;
         });
-
-        // 시퀀스 실행
-        sequence.Play();
     }
 
     private float AdditionalAttack()

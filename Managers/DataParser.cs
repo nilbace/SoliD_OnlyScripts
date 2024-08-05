@@ -12,7 +12,7 @@ public class DataParser : MonoBehaviour
     public static DataParser Inst;
     public List<CardEffectData> CardEffectList;
     private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:N85";
-    private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D44";
+    private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D45";
     public Action OnCardParseEnd;
 
     private void Awake()
@@ -120,7 +120,8 @@ public class DataParser : MonoBehaviour
         {
             Debug.LogError($"{lines[9]} : Failed to parse the string to NeedTarget.");
         }
-    
+
+        //Debug.Log(cardData.CardName);
 
         string[] effectIDs = lines[10].Split('/');
         string[] effectParameters = lines[11].Split('/');

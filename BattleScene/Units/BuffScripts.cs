@@ -39,16 +39,11 @@ public class BuffFactory
             case E_BuffType.Weakening:
                 return new Weakening(amount);
 
-
             case E_BuffType.Bloodstain:
                 return new Bloodstain(amount);
 
-
-
             case E_BuffType.Blade:
                 return new Blade(amount);
-
-
 
             case E_BuffType.BlueDragon:
                 return new BlueDragon(amount);
@@ -82,7 +77,6 @@ public class BuffFactory
 
             case E_BuffType.ReaperMark:
                 return new ReaperMark(amount);
-
 
             case E_BuffType.DemonicWhisper:
                 return new DemonicWhisper(amount);
@@ -207,20 +201,14 @@ public class Weakening : BuffBase
 
 public class Bloodstain : BuffBase
 {
-    public Bloodstain(float stack) : base(E_BuffType.Bloodstain, -1, stack,
-        "적에게 공격 피해를 받으면 공격 대상에게 가시 수치만큼 피해를 준다. 전투 내내 지속")
+    public Bloodstain(float duration) : base(E_BuffType.Bloodstain, duration, -1,
+        "다음 턴 시작 시 1 감소한다.")
     { }
     public override void ApplyEffect(UnitBase unit)
     {
         ApplyOrUpdateEffectByStack(unit);
     }
-
-    public override void NextTurnStarted(UnitBase unit)
-    {
-        unit.NowHp -= Stack;
-        unit.BuffList.Remove(this);
-    }
-}
+ }
 
 
 public class Blade : BuffBase
