@@ -16,18 +16,18 @@ public class PoolManager
 
 public class EffectPool
 {
-    private Dictionary<E_EffectType, List<EffectBase>> _effectDictionary;
+    private Dictionary<E_EffectType, List<BuffBase>> _effectDictionary;
 
     /// <summary>
     /// 생성시 각 상태 4개씩 초기화
     /// </summary>
     public EffectPool()
     {
-        _effectDictionary = new Dictionary<E_EffectType, List<EffectBase>>();
+        _effectDictionary = new Dictionary<E_EffectType, List<BuffBase>>();
     }
 
 
-    public EffectBase GetEffect(E_EffectType effectType, float duration)
+    public BuffBase GetEffect(E_EffectType effectType, float duration)
     {
         var effectList = _effectDictionary[effectType];
         if (effectList.Count > 0)
@@ -44,9 +44,9 @@ public class EffectPool
 
     }
 
-    private EffectBase CreateEffect(E_EffectType effectType, float duration)
+    private BuffBase CreateEffect(E_EffectType effectType, float duration)
     {
-        EffectBase newEffect = effectType switch
+        BuffBase newEffect = effectType switch
         {
             //E_EffectType.Stun => new StunEffect(duration),
             _ => null,
@@ -55,7 +55,7 @@ public class EffectPool
         return newEffect;
     }
 
-    public void ReturnEffect(E_EffectType effectType, EffectBase effect)
+    public void ReturnEffect(E_EffectType effectType, BuffBase effect)
     {
         if (_effectDictionary.ContainsKey(effectType))
         {

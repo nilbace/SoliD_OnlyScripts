@@ -9,9 +9,9 @@ public class EffectIcon : MonoBehaviour
     public Image IMG_icon;
     public TMP_Text TMP_Count;
 
-    public void SetIcon(EffectBase effect)
+    public void SetIcon(BuffBase effect)
     {
-        IMG_icon.sprite = BattleIconManager.Inst.GetEffectIcon(effect.ThisEffectType);
+        IMG_icon.sprite = BattleIconManager.Inst.GetEffectIcon(effect.BuffType);
         TMP_Count.text = ((effect.Duration != -1) ? effect.Duration : effect.Stack).ToString();
     }
 }

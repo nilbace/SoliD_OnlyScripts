@@ -47,7 +47,7 @@ public class CardReward : MonoBehaviour
             CardGOs[i].transform.position = new Vector3(0, -0.51f, 0);
             var cardgo = CardGOs[i].GetComponent<CardGO>();
             cardgo.thisCardData = _rewardCards[i];
-            cardgo.SetCardSprite();
+            cardgo.SetUpCardSprite();
             CardGOs[i].transform.DOMoveX((i - 1) * 5, 0.2f);
         }
     }

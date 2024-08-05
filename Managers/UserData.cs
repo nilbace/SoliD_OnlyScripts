@@ -6,11 +6,11 @@ using System.Linq;
 public class UserData
 {
     public List<CardData> AllCardsList = new List<CardData>();
-    public List<CardData> UserDeck = new List<CardData>();
+    
     private int _nowGold;
     public int NowGold { get { return _nowGold; } }
 
-    public List<CardData> GetRandomCards(int number, E_CardTier? tier = null, E_CardOwner? cardOwner = null)
+    public List<CardData> GetRandomCards(int number, E_CardTier? tier = null, E_CharName? cardOwner = null)
     {
         var temp = new List<CardData>();
         var randomIndices = new HashSet<int>();

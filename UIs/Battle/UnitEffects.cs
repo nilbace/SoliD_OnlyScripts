@@ -22,10 +22,10 @@ public class UnitEffects : MonoBehaviour
         }
 
         // ActiveEffects 리스트의 각 효과에 대해 아이콘 생성 및 설정
-        for (int i = 0; i < thisUnit.ActiveEffectList.Count; i++)
+        for (int i = 0; i < thisUnit.BuffList.Count; i++)
         {
             GameObject newIcon = Instantiate(_iconGO, transform);
-            newIcon.GetComponent<EffectIcon>().SetIcon(thisUnit.ActiveEffectList[i]);
+            newIcon.GetComponent<EffectIcon>().SetIcon(thisUnit.BuffList[i]);
         }
     }
 }

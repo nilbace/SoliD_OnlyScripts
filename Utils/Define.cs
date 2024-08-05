@@ -18,9 +18,8 @@ public enum E_CharNameKor
 }
 
 public enum E_CardType { Attack, Defence, Skill }
-public enum E_CardOwner { Minju, Seolha, Yerin }
 public enum E_CardColor { Magenta, Cyan, Yellow, Black }
-public enum E_CardTier { Normal, Rare }
+public enum E_CardTier { Basic,Normal, Rare }
 public enum E_TargetType
 {
     None,
@@ -28,19 +27,16 @@ public enum E_TargetType
     AllEnemies,
     Self,
     AnyEnemy,
+    AllAllies,
     MaxCount
 }
 
-public enum E_EffectType
-{
-    Strength, Crystallization, Blessing, Vulnerability, Weakening, Thorn, Bloodstain, Chain, Encroachment, Blade, BulletMark,
-    Injury, Concussion, Despair, MuscleLoss, Scabbard, Interval, Damage, Shield, Heal, Black,  MaxCount
-}
+public enum E_WeaponType { None,Talisman, Staff, Blade, ShotGun, Guitar, Scythe}
 
 [System.Serializable]
 public class CardEffectData
 {
-    public int EffectID;
+    public int EffectIndex;
     public E_TargetType TargetType;
     public E_EffectType CardEffectType;
     public float Amount;
@@ -48,7 +44,7 @@ public class CardEffectData
 
     public CardEffectData(CardEffectData cardEffectData)
     {
-        EffectID = cardEffectData.EffectID;
+        EffectIndex = cardEffectData.EffectIndex;
         TargetType = cardEffectData.TargetType;
         CardEffectType = cardEffectData.CardEffectType;
         Amount = cardEffectData.Amount;
@@ -60,9 +56,11 @@ public class CardEffectData
 [System.Serializable]
 public class CardData
 {
+    public int CardIndex;
     public E_CardType CardType;
-    public E_CardOwner CardOwner;
+    public E_CharName CardOwner;
     public E_CardColor CardColor;
+    public E_WeaponType WeaponType;
     public E_CardTier CardTier;
     public int CardCost;
     public string CardName;

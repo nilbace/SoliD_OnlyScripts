@@ -11,8 +11,9 @@ public class DataParser : MonoBehaviour
 {
     public static DataParser Inst;
     public List<CardEffectData> CardEffectList;
-    private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:K32";
-    private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D26";
+    private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:N85";
+    private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D44";
+    public Action OnCardParseEnd;
 
     private void Awake()
     {
@@ -27,6 +28,7 @@ public class DataParser : MonoBehaviour
     {
         yield return StartCoroutine(RequestAndSetDayDatas(URL_CardEffectData, ProcessCardEffectData_To_List));
         yield return StartCoroutine(RequestAndSetDayDatas(URL_CardData, ProcessCard_To_Deck));
+        OnCardParseEnd?.Invoke();
     }
 
  
@@ -56,7 +58,7 @@ public class DataParser : MonoBehaviour
     {
         string[] lines = data.Substring(0, data.Length).Split('\t');
         CardEffectData cardEffect = new CardEffectData();
-        if (!int.TryParse(lines[0], out cardEffect.EffectID))
+        if (!int.TryParse(lines[0], out cardEffect.EffectIndex))
         {
             Debug.LogError($"{lines[0]} : Failed to parse the string to EffectID.");
         }
@@ -76,42 +78,52 @@ public class DataParser : MonoBehaviour
     {
         string[] lines = data.Substring(0, data.Length).Split('\t');
         CardData cardData = new CardData();
-        if (!Enum.TryParse(lines[0], out cardData.CardType))
+        if (!int.TryParse(lines[0], out cardData.CardIndex))
         {
-            Debug.LogError($"{lines[0]} : Failed to parse the string to CardType.");
+            Debug.LogError($"{lines[0]} : Failed to parse the string to CardIndex.");
         }
 
-        if (!Enum.TryParse(lines[1], out cardData.CardOwner))
+        if (!Enum.TryParse(lines[1], out cardData.CardType))
         {
-            Debug.LogError($"{lines[1]} : Failed to parse the string to CardOwner.");
+            Debug.LogError($"{lines[1]} : Failed to parse the string to CardType.");
         }
 
-        if (!Enum.TryParse(lines[2], out cardData.CardColor))
+        if (!Enum.TryParse(lines[2], out cardData.CardOwner))
         {
-            Debug.LogError($"{lines[2]} : Failed to parse the string to CardColor.");
+            Debug.LogError($"{lines[2]} : Failed to parse the string to CardOwner.");
         }
 
-        if (!Enum.TryParse(lines[3], out cardData.CardTier))
+        if (!Enum.TryParse(lines[3], out cardData.CardColor))
         {
-            Debug.LogError($"{lines[3]} : Failed to parse the string to CardTier.");
+            Debug.LogError($"{lines[3]} : Failed to parse the string to CardColor.");
         }
 
-        if (!int.TryParse(lines[4], out cardData.CardCost))
+        if (!Enum.TryParse(lines[4], out cardData.WeaponType))
         {
-            Debug.LogError($"{lines[4]} : Failed to parse the string to CardCost.");
+            Debug.LogError($"{lines[4]} : Failed to parse the string to WeaponType.");
         }
 
-        cardData.CardName = lines[5];
-        cardData.CardInfoText = lines[6];
-
-        if (!bool.TryParse(lines[7], out cardData.NeedTarget))
+        if (!Enum.TryParse(lines[5], out cardData.CardTier))
         {
-            Debug.LogError($"{lines[7]} : Failed to parse the string to NeedTarget.");
+            Debug.LogError($"{lines[5]} : Failed to parse the string to CardTier.");
+        }
+
+        if (!int.TryParse(lines[6], out cardData.CardCost))
+        {
+            Debug.LogError($"{lines[6]} : Failed to parse the string to CardCost.");
+        }
+
+        cardData.CardName = lines[7];
+        cardData.CardInfoText = lines[8];
+
+        if (!bool.TryParse(lines[9], out cardData.NeedTarget))
+        {
+            Debug.LogError($"{lines[9]} : Failed to parse the string to NeedTarget.");
         }
     
 
-        string[] effectIDs = lines[8].Split('/');
-        string[] effectParameters = lines[9].Split('/');
+        string[] effectIDs = lines[10].Split('/');
+        string[] effectParameters = lines[11].Split('/');
         for (int i = 0; i < effectIDs.Length; i++)
         {
             string index = effectIDs[i];
@@ -134,10 +146,10 @@ public class DataParser : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"{index} : Failed to parse the string to effect index.");
+                //Debug.LogError($"{index} : Failed to parse the string to effect index.");
             }
         }
-        cardData.CardSpriteNameString = lines[10].Trim();
+        cardData.CardSpriteNameString = lines[12].Trim();
         // 처리된 카드를 덱에 추가
         GameManager.UserData.AllCardsList.Add(cardData);
     }
@@ -146,7 +158,7 @@ public class DataParser : MonoBehaviour
     {
         foreach (var effectData in CardEffectList)
         {
-            if (effectData.EffectID == index)
+            if (effectData.EffectIndex == index)
             {
                 return effectData;
             }
