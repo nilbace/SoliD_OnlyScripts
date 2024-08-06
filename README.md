@@ -7,4 +7,4 @@ Unity / 2D / 로그라이크 덱 빌딩 게임
 # 개발 툴
 Unity Engine / C#
 
-# Script만 따로 빼놓은 Repository입니다.
+# 유료 에셋 이슈로 Script만 따로 빼놓은 Repository입니다.
