@@ -11,7 +11,7 @@ public class StoreCard : MonoBehaviour
         if (CanBuy())
         {
             Debug.Log("Card purchased for: " + CardCost);
-            GameManager.UserData.UseGold(CardCost);
+            GameManager.UserData.UseMoonStone(CardCost);
             Destroy(gameObject); // 카드를 구매한 후 삭제
         }
         else
@@ -22,6 +22,6 @@ public class StoreCard : MonoBehaviour
 
     private bool CanBuy()
     {
-        return GameManager.UserData.NowGold >= CardCost;
+        return GameManager.UserData.MoonStoneAmount >= CardCost;
     }
 }

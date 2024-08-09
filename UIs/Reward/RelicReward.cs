@@ -6,6 +6,8 @@ public class RelicReward : MonoBehaviour
 {
     public static E_RelicType S_RelicType;
     public UnityEngine.UI.Image Image;
+    public bool IsEnergyAddRelic;
+
 
     private void OnEnable()
     {
@@ -14,12 +16,12 @@ public class RelicReward : MonoBehaviour
 
     private void Setup()
     {
-        Image.sprite = RelicManager.Inst.GetRelicSprite(S_RelicType);
+        Image.sprite = IconContainer.Inst.GetRelicSprite(S_RelicType);
     }
 
     public void OnClick()
     {
-        RelicManager.Inst.AddRelic(S_RelicType);
+        TrialManager.Inst.AddRelic(S_RelicType);
     }
 
 }

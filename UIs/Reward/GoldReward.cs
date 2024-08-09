@@ -8,6 +8,6 @@ public class GoldReward : MonoBehaviour
 
     public void OnClick()
     {
-        RewardManager.Inst.AddGold();
+        GameManager.Reward.AddMoonStone();
     }
 }

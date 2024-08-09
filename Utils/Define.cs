@@ -53,6 +53,7 @@ public class CardEffectData
 
     public CardEffectData() { }
 }
+
 [System.Serializable]
 public class CardData
 {
@@ -66,8 +67,10 @@ public class CardData
     public string CardName;
     public string CardInfoText;
     public bool NeedTarget;
+    public bool WillExpire;
     public string CardSpriteNameString;
     public List<CardEffectData> CardEffectList;
+    public string DamageEffectType;
 
     public CardData()
     {

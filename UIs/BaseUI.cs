@@ -17,7 +17,7 @@ public class BaseUI : MonoBehaviour
 
     public void UpdateUIs()
     {
-        TMP_Gold.text = GameManager.UserData.NowGold.ToString();
+        TMP_Gold.text = GameManager.UserData.MoonStoneAmount.ToString();
     }
 
     public void MapBTN()

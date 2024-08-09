@@ -8,11 +8,14 @@ public class GameManager : MonoBehaviour
     static GameManager s_instance;
     public static GameManager Inst { get { Init(); return s_instance; } }
 
-    PoolManager _pool = new PoolManager();
     UserData _userData = new UserData();
-    public static PoolManager Pool { get { return Inst._pool; } }
+    CardDataManager _cardData = new CardDataManager();
+    RewardManager _reward = new RewardManager();
     public static BattleManager Battle { get { return BattleManager.Inst; } }
     public static UserData UserData { get { return Inst._userData; } }
+    public static CardDataManager CardData { get { return Inst._cardData; } }
+    public static RewardManager Reward { get { return Inst._reward; } }
+    
 
     private void Awake()
     {
@@ -32,10 +35,17 @@ public class GameManager : MonoBehaviour
 
             s_instance = go.GetComponent<GameManager>();
 
-            s_instance._pool.Init();
             s_instance._userData.Init();
+            s_instance._cardData.Init();
+            s_instance._reward.Init();
         }
 
+    }
+
+    [ContextMenu("º¸»ó")]
+    void showReward()
+    {
+        Reward.GenerateReward(E_RewardType.Normal);
     }
 
     [RuntimeInitializeOnLoadMethod]

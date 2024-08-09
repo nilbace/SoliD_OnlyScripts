@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
 {
-    public List<CardData> UserDeck = new List<CardData>();
     public List<CardData> DrawPile = new List<CardData>();
     public List<CardData> DiscardPile = new List<CardData>();
 
@@ -16,12 +15,12 @@ public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
     public void MakeBaseDeck()
     {
         Debug.Log("덱 생성 완료");
-        UserDeck.AddRange(GameManager.UserData.AllCardsList.GetRange(0, 20));
+        TrialManager.Inst.UserDeck.AddRange(GameManager.CardData.AllCardsList.GetRange(0, 20));
     }
 
     public void StartBattle()
     {
-        DrawPile = new List<CardData>(UserDeck);
+        DrawPile = new List<CardData>(TrialManager.Inst.UserDeck);
         //Shuffle(DrawPile); // 드로우 파일의 모든 카드 섞기
         DiscardPile = new List<CardData>();
     }

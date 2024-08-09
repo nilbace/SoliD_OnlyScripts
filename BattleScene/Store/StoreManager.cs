@@ -23,7 +23,7 @@ public class StoreManager : MonoBehaviour
         var storeRelic = newRelic.GetComponent<StoreRelic>();
 
         var randIndex = Random.Range(0, (int)E_RelicType.MaxCount);
-        newRelic.GetComponent<SpriteRenderer>().sprite = RelicManager.Inst.GetRelicSprite((E_RelicType)randIndex);
+        newRelic.GetComponent<SpriteRenderer>().sprite = IconContainer.Inst.GetRelicSprite((E_RelicType)randIndex);
         storeRelic.RelicType = (E_RelicType)randIndex;
 
         int randomPrice = Random.Range(100, 121);
@@ -35,7 +35,7 @@ public class StoreManager : MonoBehaviour
         var storeRelic2 = newRelic2.GetComponent<StoreRelic>();
 
         var randIndex2 = Random.Range(0, (int)E_RelicType.MaxCount);
-        newRelic2.GetComponent<SpriteRenderer>().sprite = RelicManager.Inst.GetRelicSprite((E_RelicType)randIndex2);
+        newRelic2.GetComponent<SpriteRenderer>().sprite = IconContainer.Inst.GetRelicSprite((E_RelicType)randIndex2);
         storeRelic2.RelicType = (E_RelicType)randIndex2;
 
         int randomPrice2 = Random.Range(100, 121);
@@ -52,7 +52,7 @@ public class StoreManager : MonoBehaviour
     }
     private void ShowCards()
     {
-        var Cards = GameManager.UserData.AllCardsList;
+        var Cards = GameManager.CardData.AllCardsList;
 
         for (int i = 0; i < 5; i++)
         {

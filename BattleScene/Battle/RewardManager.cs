@@ -1,27 +1,66 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
+using UnityEngine.UI;
 
-enum E_RewardList { Gold,Relic, Card}
-
-public class RewardManager : MonoBehaviour
+public enum E_RewardType { Normal, Elite, Boss}
+public class RewardManager
 {
-    public static RewardManager Inst;
-    public GameObject RewardBoard;
+    public GameObject RewardPannel;
     public Transform RewardsParent;
+    public MonsterReward[] Rewards;
 
-    private void Awake()
+    public void Init()
     {
-        Inst = this;
+        RewardPannel = GameObject.Find("Canvases").transform.GetChild(1).gameObject;
+        RewardsParent = RewardPannel.transform.GetChild(1).GetChild(0);
+        Button ExitBTN = RewardPannel.transform.GetChild(1).GetChild(1).GetComponent<Button>();
+        ExitBTN.onClick.AddListener(()=>ExitReward());
+        LoadRewards();
     }
 
-    public void GenerateNormalMonsterReward()
+    /// <summary>
+    /// Resoruces폴더에서 필요한 데이터들 로드
+    /// </summary>
+    private void LoadRewards()
     {
-        GoldReward.GoldRewardAmount = Random.Range(100, 121);
-        RelicReward.S_RelicType = (E_RelicType)Random.Range(0, (int)E_RelicType.MaxCount);
-        CardReward.RareCardProbability = 0.1f;
-        // RewardBoard의 모든 자식들을 활성화
-        RewardBoard.SetActive(true);
+        Rewards = Resources.LoadAll<MonsterReward>("BattleReward");
+
+        if (Rewards == null || Rewards.Length == 0)
+        {
+            Debug.LogError("No MonsterRewards found in the Resources/BattleReward folder.");
+        }
+        else
+        {
+        }
+    }
+
+    /// <summary>
+    /// 적의 난이도에 따라 보상 생성
+    /// </summary>
+    /// <param name="rewardType"></param>
+    public void GenerateReward(E_RewardType rewardType)
+    {
+        string rewardName = rewardType.ToString();
+
+        MonsterReward selectedReward = System.Array.Find(Rewards, reward => reward.name == rewardName);
+
+        if (selectedReward == null)
+        {
+            Debug.LogWarning("No matching reward found for the type: " + rewardType);
+            return;
+        }
+
+        int moonStoneReward = Random.Range(selectedReward.MinMoonStoneReward, selectedReward.MaxMoonStoneReward + 1);
+        int memoryFragmentReward = Random.Range(selectedReward.MinMemoryFramentDiv100, selectedReward.MaxMemoryFragmentDiv100 + 1) * 100;
+        int coreFragmentReward = Random.Range(selectedReward.MinCoreFragment, selectedReward.MaxCoreFragment + 1);
+
+        GoldReward.GoldRewardAmount = moonStoneReward;
+        //Todo 유물 보상 생성 로직
+        //Todo 카드 보상 생성 로직
+
+        RewardPannel.SetActive(true);
         foreach (Transform child in RewardsParent)
         {
             child.gameObject.SetActive(true);
@@ -33,28 +72,37 @@ public class RewardManager : MonoBehaviour
         Map.MapPlayerTracker.Instance.Locked = false;
         Map.MapView.Inst.ShowMap();
     }
-
-    public void AddGold()
+ 
+    public void AddMoonStone()
     {
-        StartCoroutine(AddGoldOverTime(1f));
+        AddMoonStoneOverTime(1f);
     }
 
-    private IEnumerator AddGoldOverTime(float duration)
+    private void AddMoonStoneOverTime(float duration)
     {
-        int initialGold = GameManager.UserData.NowGold;
+        int initialGold = GameManager.UserData.MoonStoneAmount;
         int targetGold = initialGold + GoldReward.GoldRewardAmount;
-        float elapsedTime = 0f;
 
-        while (elapsedTime < duration)
-        {
-            elapsedTime += Time.deltaTime;
-            int currentGold = Mathf.RoundToInt(Mathf.Lerp(initialGold, targetGold, elapsedTime / duration));
-            GameManager.UserData.AddGold(currentGold - GameManager.UserData.NowGold);
+        // Variable to store the last frame's gold value
+        int lastGold = initialGold;
 
-            yield return null;
-        }
-
-        // Ensure the final value is set correctly
-        GameManager.UserData.AddGold(targetGold - GameManager.UserData.NowGold);
+        // DOTween to animate gold increase over time
+        DOTween.To(() => initialGold,
+                   x => {
+                       int deltaGold = x - lastGold;
+                       GameManager.UserData.AddMoonStone(deltaGold); // Update gold incrementally
+                   lastGold = x;
+                   },
+                   targetGold,
+                   duration)
+            .OnComplete(() =>
+            {
+            // Ensure the final value is set correctly if necessary
+            int finalGoldAmount = targetGold - GameManager.UserData.MoonStoneAmount;
+                if (finalGoldAmount > 0)
+                {
+                    GameManager.UserData.AddMoonStone(finalGoldAmount);
+                }
+            });
     }
 }

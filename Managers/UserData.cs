@@ -3,60 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
+/// <summary>
+/// 각종 재화, 스토리 진행 상태 등을 저장
+/// </summary>
 public class UserData
 {
-    public List<CardData> AllCardsList = new List<CardData>();
-    
-    private int _nowGold;
-    public int NowGold { get { return _nowGold; } }
-
-    public List<CardData> GetRandomCards(int number, E_CardTier? tier = null, E_CharName? cardOwner = null)
-    {
-        var temp = new List<CardData>();
-        var randomIndices = new HashSet<int>();
-
-        IEnumerable<CardData> filteredCards = AllCardsList;
-
-        // Apply filters based on the provided tier and cardOwner
-        if (tier.HasValue)
-        {
-            filteredCards = filteredCards.Where(card => card.CardTier == tier.Value);
-        }
-        if (cardOwner.HasValue)
-        {
-            filteredCards = filteredCards.Where(card => card.CardOwner == cardOwner.Value);
-        }
-
-        var filteredList = filteredCards.ToList();
-
-        // Select random cards from the filtered list
-        while (randomIndices.Count < number)
-        {
-            int randomIndex = Random.Range(0, filteredList.Count);
-            if (randomIndices.Add(randomIndex))
-            {
-                temp.Add(filteredList[randomIndex]);
-            }
-        }
-
-        return temp;
-    }
-
-
-
-
-    public void AddGold(int amount)
-    {
-        _nowGold += amount;
-        BaseUI.Inst.UpdateUIs();
-    }
-
-    public void UseGold(int amount)
-    {
-        _nowGold -= amount;
-        BaseUI.Inst.UpdateUIs();
-    }
-
     public void Init()
     {
         if (PlayerPrefs.HasKey("UserData"))
@@ -65,18 +16,14 @@ public class UserData
         }
         else
         {
-            // 새로운 유저 데이터 생성
-            AllCardsList = new List<CardData>();
             SaveData();
         }
         BaseUI.Inst.UpdateUIs();
     }
-
     public void LoadData()
     {
         string jsonData = PlayerPrefs.GetString("UserData");
         UserData loadedData = JsonUtility.FromJson<UserData>(jsonData);
-        AllCardsList = loadedData.AllCardsList;
     }
 
     public void SaveData()
@@ -85,4 +32,51 @@ public class UserData
         PlayerPrefs.SetString("UserData", jsonData);
         PlayerPrefs.Save();
     }
+
+    #region Currency
+
+    private int _moonStoneAmount;
+    public int MoonStoneAmount { get { return _moonStoneAmount; } }
+    private int _memoryFragmentAmount;
+    public int MemoryFragmentAmount { get { return _memoryFragmentAmount; } }
+    private int _coreFragmentAmount;
+    public int CoreFragmentAmount { get { return _coreFragmentAmount; } }
+
+    public void AddMoonStone(int amount)
+    {
+        _moonStoneAmount += amount;
+        BaseUI.Inst.UpdateUIs();
+    }
+
+    public void UseMoonStone(int amount)
+    {
+        _moonStoneAmount -= amount;
+        BaseUI.Inst.UpdateUIs();
+    }
+
+    public void AddMemoryFragment(int amount)
+    {
+        _memoryFragmentAmount += amount;
+        BaseUI.Inst.UpdateUIs();
+    }
+
+    public void UseMemoryFragment(int amount)
+    {
+        _memoryFragmentAmount -= amount;
+        BaseUI.Inst.UpdateUIs();
+    }
+    
+    public void AddCoreFragment(int amount)
+    {
+        _coreFragmentAmount += amount;
+        BaseUI.Inst.UpdateUIs();
+    }
+
+    public void UseCoreFragment(int amount)
+    {
+        _coreFragmentAmount -= amount;
+        BaseUI.Inst.UpdateUIs();
+    }
+
+    #endregion
 }

@@ -25,8 +25,8 @@ public class CardReward : MonoBehaviour
         if (Random.value <= RareCardProbability)
         {
             // 레어 카드 1장, 일반 카드 2장 선택
-            var rareCard = GameManager.UserData.GetRandomCards(1, E_CardTier.Rare);
-            var normalCards = GameManager.UserData.GetRandomCards(2, E_CardTier.Normal);
+            var rareCard = GameManager.CardData.GetRandomCards(1, E_CardTier.Rare);
+            var normalCards = GameManager.CardData.GetRandomCards(2, E_CardTier.Normal);
 
             if (rareCard != null)
             {
@@ -38,7 +38,7 @@ public class CardReward : MonoBehaviour
         else
         {
             // 일반 카드 3장 선택
-            var normalCards = GameManager.UserData.GetRandomCards(3, E_CardTier.Normal);
+            var normalCards = GameManager.CardData.GetRandomCards(3, E_CardTier.Normal);
             _rewardCards.AddRange(normalCards);
         }
 

@@ -1,8 +1,5 @@
 using System.Collections.Generic;
-using System.IO;
-using System.Globalization;
 using UnityEngine;
-using System.Reflection;
 using UnityEngine.Networking;
 using System.Collections;
 using System;
@@ -10,9 +7,9 @@ using System;
 public class DataParser : MonoBehaviour
 {
     public static DataParser Inst;
-    public List<CardEffectData> CardEffectList;
-    private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:N85";
-    private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D45";
+    private List<CardEffectData> CardEffectList = new List<CardEffectData>();
+    private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:O86";
+    private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D55";
     public Action OnCardParseEnd;
 
     private void Awake()
@@ -27,7 +24,7 @@ public class DataParser : MonoBehaviour
     IEnumerator RequestDatas()
     {
         yield return StartCoroutine(RequestAndSetDayDatas(URL_CardEffectData, ProcessCardEffectData_To_List));
-        yield return StartCoroutine(RequestAndSetDayDatas(URL_CardData, ProcessCard_To_Deck));
+        yield return StartCoroutine(RequestAndSetDayDatas(URL_CardData, ProcessCard_To_AllCardList));
         OnCardParseEnd?.Invoke();
     }
 
@@ -74,7 +71,7 @@ public class DataParser : MonoBehaviour
         CardEffectList.Add(cardEffect);
     }
 
-    void ProcessCard_To_Deck(string data)
+    void ProcessCard_To_AllCardList(string data)
     {
         string[] lines = data.Substring(0, data.Length).Split('\t');
         CardData cardData = new CardData();
@@ -113,18 +110,23 @@ public class DataParser : MonoBehaviour
             Debug.LogError($"{lines[6]} : Failed to parse the string to CardCost.");
         }
 
-        cardData.CardName = lines[7];
-        cardData.CardInfoText = lines[8];
+        cardData.CardName = lines[7].Trim();
+        cardData.CardInfoText = lines[8].Trim();
 
         if (!bool.TryParse(lines[9], out cardData.NeedTarget))
         {
             Debug.LogError($"{lines[9]} : Failed to parse the string to NeedTarget.");
         }
 
+        if (!bool.TryParse(lines[10], out cardData.WillExpire))
+        {
+            Debug.LogError($"{lines[10]} : Failed to parse the string to Expire.");
+        }
+
         //Debug.Log(cardData.CardName);
 
-        string[] effectIDs = lines[10].Split('/');
-        string[] effectParameters = lines[11].Split('/');
+        string[] effectIDs = lines[11].Split('/');
+        string[] effectParameters = lines[12].Split('/');
         for (int i = 0; i < effectIDs.Length; i++)
         {
             string index = effectIDs[i];
@@ -150,9 +152,10 @@ public class DataParser : MonoBehaviour
                 //Debug.LogError($"{index} : Failed to parse the string to effect index.");
             }
         }
-        cardData.CardSpriteNameString = lines[12].Trim();
+        cardData.CardSpriteNameString = lines[13].Trim();
+        cardData.DamageEffectType = lines[14].Trim();
         // 처리된 카드를 덱에 추가
-        GameManager.UserData.AllCardsList.Add(cardData);
+        GameManager.CardData.AllCardsList.Add(cardData);
     }
 
     public CardEffectData GetCardEffectFromListByIndex(int index)

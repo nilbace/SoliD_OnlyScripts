@@ -27,6 +27,9 @@ public class HandManager : MonoSingleton<HandManager>
 
     public void DrawCards(int count)
     {
+        //전투중이 아니라면 카드를 뽑지 않음
+        if (!BattleManager.Inst.IsOnBattle) return;
+
         // DOTween 시퀀스 생성
         Sequence sequence = DOTween.Sequence();
 
@@ -46,8 +49,6 @@ public class HandManager : MonoSingleton<HandManager>
             // 각 카드 생성 후 대기 시간 추가
             sequence.AppendInterval(0.2f);
         }
-        // 시퀀스 실행
-        //sequence.Play();
     }
 
     public void AddCardToHand(CardData cardData)
@@ -64,13 +65,13 @@ public class HandManager : MonoSingleton<HandManager>
 
     public void AddCardToHand(int cardIndex)
     {
-        AddCardToHand(GameManager.UserData.AllCardsList.FirstOrDefault(e => e.CardIndex == cardIndex));
+        AddCardToHand(GameManager.CardData.AllCardsList.FirstOrDefault(e => e.CardIndex == cardIndex));
     }
 
     public void AddRandomBlackCard()
     {
         int index = Random.Range(65, 71);
-        AddCardToHand(GameManager.UserData.AllCardsList.FirstOrDefault(e => e.CardIndex == index));
+        AddCardToHand(GameManager.CardData.AllCardsList.FirstOrDefault(e => e.CardIndex == index));
     }
 
 
@@ -103,6 +104,16 @@ public class HandManager : MonoSingleton<HandManager>
         }
     }
 
+    public void ExpireCardFromHand(GameObject cardGO)
+    {
+        if (CardsInMyHandList.Contains(cardGO))
+        {
+            CardsInMyHandList.Remove(cardGO);
+            Destroy(cardGO);
+            ArrangeCards();
+        }
+    }
+
     public void DiscardAllCardsFromHand()
     {
         foreach (GameObject card in CardsInMyHandList)
@@ -113,6 +124,49 @@ public class HandManager : MonoSingleton<HandManager>
         CardsInMyHandList.Clear();
         ArrangeCards();
     }
+
+    public bool CanDiscardBlackCard()
+    {
+        foreach (GameObject card in CardsInMyHandList)
+        {
+            CardData cardData = card.GetComponent<CardGO>().thisCardData;
+
+            if (cardData.CardIndex >= 65 && cardData.CardIndex <= 70)
+            {
+                return true;
+            }
+        }
+
+        return false; 
+    }
+
+    public void DiscardRandomBlackCard()
+    {
+        List<GameObject> blackCardsInHand = new List<GameObject>();
+
+        foreach (GameObject card in CardsInMyHandList)
+        {
+            CardData cardData = card.GetComponent<CardGO>().thisCardData;
+
+            if (cardData.CardIndex >= 65 && cardData.CardIndex <= 70)
+            {
+                blackCardsInHand.Add(card);
+            }
+        }
+
+        if (blackCardsInHand.Count > 0)
+        {
+            int randomIndex = Random.Range(0, blackCardsInHand.Count);
+            GameObject cardToDiscard = blackCardsInHand[randomIndex];
+
+            DiscardCardFromHand(cardToDiscard);
+        }
+        else
+        {
+            Debug.Log("No black cards to discard.");
+        }
+    }
+
 
     /// <summary>
     /// 카드가 3장 미만일때의 적절한 위치 처리용 함수

@@ -14,6 +14,8 @@ public class BattleManager : MonoSingleton<BattleManager>
     public List<MonsterBase> MonsterUnits;
     public int MonsterCount;
     public Action OnBattleStart;
+    public Action OnPlayerTurnStart;
+    public bool IsOnBattle;
 
     //캐릭터 이동 관련
     [Tooltip("캐릭터 사이의 거리")]
@@ -23,7 +25,6 @@ public class BattleManager : MonoSingleton<BattleManager>
     public float PlayerMoveDuration;
 
     //플레이어가 조준한 몬스터
-    [HideInInspector]
     public UnitBase TargetMonster;
     
     //에너지 관련
@@ -55,14 +56,19 @@ public class BattleManager : MonoSingleton<BattleManager>
         MonsterUnits = new List<MonsterBase>();
     }
 
-    
+    public static bool TargetIsAlive()
+    {
+        return Inst.TargetMonster.isAlive();
+    }
 
     /// <summary>
     /// 적을 배치하고 플레이어 턴 시작하면 됨
+    /// TargetMonster를 비워줘야 함
     /// </summary>
     [ContextMenu("적 시작")]
     public void StartMinorBattle()
     {
+        TargetMonster = null;
         OnBattleStart?.Invoke();
         var seq = DOTween.Sequence();
         seq.AppendCallback(() =>
@@ -71,8 +77,6 @@ public class BattleManager : MonoSingleton<BattleManager>
             SetUpEnemy(MonsterContainer.Inst.GetAnyMinorMonster(), new Vector3(5, 0f, 0f));
 
         })
-            .AppendInterval(0.2f)
-            .AppendCallback(ActiveRelics)
             .AppendInterval(0.2f)
             .AppendCallback(StartPlayerTurn);
     }
@@ -87,21 +91,19 @@ public class BattleManager : MonoSingleton<BattleManager>
         MonsterBase.OnDead += () => ClearCheck();
         MonsterCount++;
     }
-
-    public void ActiveRelics()
-    {
-        RelicManager.Inst.OnBattleStart?.Invoke();
-    }
-
+  
     public void StartPlayerTurn()
     {
+        IsOnBattle = true;
         FillEnergy();
         HandManager.Inst.DrawCards(6);
         ShowMonsterIntents();
+        OnPlayerTurnStart?.Invoke();
     }
 
     public void EndPlayerTurn()
     {
+        if (!IsOnBattle) return;
         HandManager.Inst.DiscardAllCardsFromHand();
         ReduceEffectDuration(isPlayer: true);
         StartMonsterTurn();
@@ -124,7 +126,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         foreach (MonsterBase mon in MonsterUnits)
         {
             if (!mon.isAlive()) continue;
-            sequence.Append(mon.GetSequenceByIntent()).AppendInterval(0.5f);
+            sequence.Append(mon.StartNowPattern()).AppendInterval(0.5f);
         }
         sequence.OnComplete(() => {
             ReduceEffectDuration(isPlayer: false);
@@ -132,18 +134,20 @@ public class BattleManager : MonoSingleton<BattleManager>
         });
     }
 
-    void ClearCheck()
+    private void ClearCheck()
     {
         MonsterCount--;
         Debug.Log("체크");
-        if (MonsterCount <= 0) Clear();
+        if (MonsterCount <= 0) ClearBattle();
     }
 
-    public void Clear()
+    [ContextMenu("클리어")]
+    private void ClearBattle()
     {
+        IsOnBattle = false;
         ClearPlayerStatusEffects();
         HandManager.Inst.DiscardAllCardsFromHand();
-        RewardManager.Inst.GenerateNormalMonsterReward();
+        GameManager.Reward.GenerateReward(E_RewardType.Normal);
     }
 
     private void ClearPlayerStatusEffects()
