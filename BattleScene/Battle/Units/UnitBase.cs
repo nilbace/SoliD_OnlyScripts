@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using DG.Tweening;
+using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 모든 몬스터와 캐릭터의 공통 뼈대
@@ -13,17 +15,19 @@ using DG.Tweening;
 public abstract class UnitBase : MonoBehaviour
 {
     public string Name;
-    protected float _nowHp;
-    [HideInInspector] public float MaxHP;
-    protected float _barrierAmount;
+    protected int _nowHp;
+    [HideInInspector] public int MaxHP;
+    protected int _barrierAmount;
     [HideInInspector] public bool IsInjured;
     [HideInInspector] public bool IsChained;
-    public SpriteRenderer[] BaseSprites;
     private bool _isDead;
     public List<BuffBase> BuffList =new List<BuffBase>();
     public Action EffectUpdateAction;
-    public Action OnDead { get; set; }
-    public virtual float GetBarrier()
+
+    public delegate Sequence OnDeadDelegate();
+    public OnDeadDelegate OnDead;
+
+    public virtual int GetBarrier()
     {
         return _barrierAmount;
     }
@@ -31,48 +35,67 @@ public abstract class UnitBase : MonoBehaviour
 
     public virtual void AddBarrier(float amount) 
     {
-        _barrierAmount += amount;
+        int intAmount = (int)amount;
+        _barrierAmount += intAmount;
+        if(amount>0) VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Shield, transform.position);
     }
 
     public virtual void UpdateBarrier(float amount)
     {
-        _barrierAmount = amount;
+        int intAmount = (int)amount;
+        _barrierAmount = intAmount;
     }
 
-    public virtual void GetDamage(float amount)
+    public void SetUpHP()
     {
-        float resultAmount = HasBuff(E_BuffType.Vulnerability) ? amount * 1.5f : amount;
+        _nowHp = MaxHP;
+    }
 
-        float effectiveBarrier = GetBarrier();
+    public int GetHP()
+    {
+        return _nowHp;
+    }
 
-        //베리어가 있다면
+
+    public IEnumerator GetDamageCoroutine(float amount)
+    {
+        yield return new WaitForEndOfFrame(); // Ensure coroutine begins at the next frame
+
+        // Calculate damage considering vulnerability
+        int resultAmount = (int)(HasBuff(E_EffectType.Vulnerability) ? amount * 1.5f : amount);
+        int effectiveBarrier = GetBarrier();
+
+        // Process damage against barrier
         if (effectiveBarrier > 0)
         {
-
             effectiveBarrier -= resultAmount;
 
-            //베리어가 뚫렸다면
             if (effectiveBarrier < 0)
             {
-                NowHp += effectiveBarrier;
+                _nowHp += effectiveBarrier; // Reduce HP by the overflow damage
                 effectiveBarrier = 0;
             }
         }
-        //베리어가 없다면
         else
         {
-            NowHp -= resultAmount;
+            _nowHp -= resultAmount;
         }
-
-        // Ensure HP doesn't drop below zero
-        NowHp = Mathf.Max(NowHp, 0);
 
         // Update the barrier in the derived classes
         UpdateBarrier(effectiveBarrier);
 
-        // Visual effect for damage
+        // Trigger visual effect for damage
         VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Damage, this);
-        Debug.Log($"{gameObject.name} took {resultAmount} damage. Barrier: {effectiveBarrier}, HP: {NowHp}");
+        Debug.Log($"{gameObject.name} took {resultAmount} damage. Barrier: {effectiveBarrier}, HP: {_nowHp}");
+
+        // Check if the character is dead
+        if (_nowHp <= 0)
+        {
+            Debug.Log("죽음 처리 시작");
+            yield return StartCoroutine(DeadCoroutine());
+        }
+
+        Debug.Log($"GetDamage 처리 완료, 현재 HP: {_nowHp}");
     }
 
 
@@ -83,13 +106,9 @@ public abstract class UnitBase : MonoBehaviour
         EffectUpdateAction?.Invoke();
     }
 
-    public void ApplyBuff(E_BuffType type, float amount)
-    {
-        ApplyStatusEffect(BuffFactory.GetBuffByType(type,amount));
-        VisualEffectManager.Inst.InstantiateEffect(type, transform.position);
-    }
+  
 
-    public void RemoveBuff(E_BuffType type)
+    public void RemoveBuff(E_EffectType type)
     {
         for (int i = 0; i < BuffList.Count; i++)
         {
@@ -103,25 +122,26 @@ public abstract class UnitBase : MonoBehaviour
         }
     }
 
-    public void ApplyBuff(E_EffectType type, float amount)
+    public virtual Sequence ApplyBuff(E_EffectType type, float amount)
     {
-        if (Enum.TryParse(type.ToString(), out E_BuffType newbuff))
-        {
-            ApplyBuff(newbuff, amount);
-        }
-        else
-        {
-            Debug.LogWarning($"Invalid buff type: {type}");
-        }
+        // 새로운 DOTween 시퀀스를 생성합니다.
+        Sequence sequence = DOTween.Sequence();
+
+        // 1초 동안 효과를 적용하는 시퀀스를 정의합니다.
+        sequence.AppendCallback(() => ApplyStatusEffect(BuffFactory.GetBuffByType(type, amount)))
+                .AppendCallback(() => VisualEffectManager.Inst.InstantiateEffect(type, transform.position))
+                .AppendInterval(0.5f); // 추가로 초 대기
+
+        // 시퀀스를 반환합니다.
+        return sequence;
     }
 
-
-    public bool HasBuff(E_BuffType effectType)
+    public bool HasBuff(E_EffectType effectType)
     {
         var effect = BuffList.FirstOrDefault(e => e.BuffType == effectType);
         return effect != null;
     }
-    public bool HasBuff(E_BuffType effectType, out BuffBase effect)
+    public bool HasBuff(E_EffectType effectType, out BuffBase effect)
     {
         effect = BuffList.FirstOrDefault(e => e.BuffType == effectType);
         return effect != null;
@@ -140,60 +160,120 @@ public abstract class UnitBase : MonoBehaviour
         EffectUpdateAction?.Invoke();
     }
 
-    public float NowHp
-    {
-        get { return _nowHp; }
-        set
-        {
-            float clampedValue = Mathf.Clamp(value, 0f, MaxHP);
-
-            //HP가 감소할 때
-            if (clampedValue < _nowHp)
-            {
-                _nowHp = clampedValue;
-                //처음으로 HP가 0이하가 되었다면 Dead호출
-                if (_nowHp == 0 && !_isDead)
-                {
-                    _isDead = true;
-                    Dead();
-                }
-            }
-            else
-            {
-                _nowHp = clampedValue;
-            }
-        }
-    }
-
-    public float DamagedAmount()
-    {
-        return MaxHP - NowHp;
-    }
+ 
+   
     public bool isAlive()
     {
-        return NowHp > 0;
+        return _nowHp > 0;
     }
 
-    public virtual void Dead() {
-        GetComponent<BoxCollider2D>().enabled = false;
-        var seq = DOTween.Sequence();
-        foreach(SpriteRenderer SR in BaseSprites)
+    public virtual IEnumerator DeadCoroutine()
+    {
+        Debug.Log(gameObject.name + " 사망");
+
+        // BoxCollider2D 컴포넌트를 안전하게 비활성화
+        if (TryGetComponent<BoxCollider2D>(out var collider))
         {
-            //클로저 해결용 매개변수
-            SpriteRenderer temp = SR;
-            seq.Join(temp.DOFade(0f, 1f));
+            collider.enabled = false;
         }
-        seq.AppendCallback(() => OnDead?.Invoke());
+
+        // 자식 오브젝트의 모든 SpriteRenderer에 대한 알파값 조절
+        foreach (SpriteRenderer spriteRenderer in GetComponentsInChildren<SpriteRenderer>())
+        {
+            Debug.Log(spriteRenderer.gameObject.name);
+
+            StartCoroutine(FadeOut(spriteRenderer));
+        }
+
+        // 자식 오브젝트의 모든 Image에 대한 알파값 조절
+        foreach (Image image in GetComponentsInChildren<Image>())
+        {
+            StartCoroutine(FadeOut(image));
+        }
+
+        // 자식 오브젝트의 모든 TMP_Text에 대한 알파값 조절
+        foreach (TMP_Text tmpText in GetComponentsInChildren<TMP_Text>())
+        {
+            StartCoroutine(FadeOut(tmpText));
+        }
+
+        // 모든 페이드 아웃이 끝날 때까지 대기
+        yield return new WaitForSeconds(1f);
+
+        Debug.Log("DeadCoroutine 완료");
+    }
+
+    // Fade out a SpriteRenderer over time
+    private IEnumerator FadeOut(SpriteRenderer spriteRenderer)
+    {
+        float duration = 1f;
+        float elapsedTime = 0f;
+        Color initialColor = spriteRenderer.color;
+
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float alpha = Mathf.Lerp(initialColor.a, 0f, elapsedTime / duration);
+            spriteRenderer.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
+            yield return null;
+        }
+
+        spriteRenderer.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
+    }
+
+    // Fade out an Image over time
+    private IEnumerator FadeOut(Image image)
+    {
+        float duration = 1f;
+        float elapsedTime = 0f;
+        Color initialColor = image.color;
+
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float alpha = Mathf.Lerp(initialColor.a, 0f, elapsedTime / duration);
+            image.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
+            yield return null;
+        }
+
+        image.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
+    }
+
+    // Fade out a TMP_Text over time
+    private IEnumerator FadeOut(TMP_Text tmpText)
+    {
+        float duration = 1f;
+        float elapsedTime = 0f;
+        Color initialColor = tmpText.color;
+
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float alpha = Mathf.Lerp(initialColor.a, 0f, elapsedTime / duration);
+            tmpText.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
+            yield return null;
+        }
+
+        tmpText.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
+    }
+
+
+
+    public Sequence Heal(float amount)
+    {
+        var seq = DOTween.Sequence();
+
+        seq.AppendCallback(() =>
+        {
+            var resultAmount = (int)(HasBuff(E_EffectType.Blessing) ? amount * 1.5f : amount);
+            _nowHp += resultAmount;
+            VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Heal, this);
+        }).AppendInterval(0.5f);
+
+        return seq;
     }
 
     
-
-    public void Heal(float amount)
-    {
-        var resultAmount = HasBuff(E_BuffType.Blessing) ? amount * 1.5f : amount;
-        NowHp += resultAmount;
-        VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Heal, this);
-    }
 
 
     [ContextMenu("Show Active Effects")]

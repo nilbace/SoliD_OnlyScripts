@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum E_MinorEnemyType { Yare, MaxCount}
+public enum E_MinorEnemyType { Yare, SeekeroftheRainbow, MaxCount}
 public class MonsterContainer : MonoBehaviour
 {
     public GameObject[] Minor_Monsters;

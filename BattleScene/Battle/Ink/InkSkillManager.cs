@@ -60,7 +60,7 @@ public class InkSkillManager : MonoBehaviour
         var seolhaUnit = BattleManager.Inst.GetPlayer(E_CharName.Seolha);
 
         //날붙이 스택이 없다면 탈출
-        if (!seolhaUnit.HasBuff(E_BuffType.Blade, out BuffBase blade))
+        if (!seolhaUnit.HasBuff(E_EffectType.Blade, out BuffBase blade))
         {
             return;
         }
@@ -74,7 +74,7 @@ public class InkSkillManager : MonoBehaviour
 
             seq.AppendCallback(() =>
             {
-                enemylist[0].GetDamage(blade.Stack);
+                enemylist[0].GetDamageCoroutine(blade.Stack);
             }).AppendInterval(0.3f);
         }
     }

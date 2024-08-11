@@ -1,3 +1,4 @@
+using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -64,28 +65,40 @@ public class Seolha : PlayableUnit
         AddBullet((E_BulletType)temp);
     }
 
-    public void ShootBulletToTarget()
+    public Sequence ShootBulletToTarget()
     {
-        if(LoadedBulletList.Count>0)
+        var sequence = DOTween.Sequence(); // 새로운 시퀀스를 생성합니다.
+
+        if (LoadedBulletList.Count > 0)
         {
-            switch (LoadedBulletList[0])
+            E_BulletType bulletType = LoadedBulletList[0];
+
+            // 각 탄환 유형에 따라 해당 버프를 적용하는 시퀀스를 추가합니다.
+            switch (bulletType)
             {
                 case E_BulletType.Frozen:
-                    BattleManager.Inst.TargetMonster.ApplyBuff(E_BuffType.Burn, 2);
+                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Frost, 2));
                     break;
                 case E_BulletType.Electric:
-                    BattleManager.Inst.TargetMonster.ApplyBuff(E_BuffType.Burn, 2);
+                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Electrocution, 2));
                     break;
                 case E_BulletType.Fire:
-                    BattleManager.Inst.TargetMonster.ApplyBuff(E_BuffType.Burn, 2);
+                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Burn, 2));
                     break;
                 case E_BulletType.Posion:
-                    BattleManager.Inst.TargetMonster.ApplyBuff(E_BuffType.Burn, 2);
+                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Posion, 2));
                     break;
             }
-            LoadedBulletList.RemoveAt(0);
-            Destroy(BulletParentTR.transform.GetChild(0).gameObject);
+
+            // 시퀀스가 끝난 후 탄환을 제거하고 오브젝트를 파괴하는 작업을 추가합니다.
+            sequence.AppendCallback(() =>
+            {
+                LoadedBulletList.RemoveAt(0);
+                Destroy(BulletParentTR.transform.GetChild(0).gameObject);
+            });
         }
+
+        return sequence; // 시퀀스를 반환합니다.
     }
 
     private void AddStackWhenAttackCardUsed()

@@ -25,10 +25,10 @@ public class HandManager : MonoSingleton<HandManager>
 
     public List<GameObject> CardsInMyHandList = new List<GameObject>();
 
-    public void DrawCards(int count)
+    public Sequence DrawCards(int count)
     {
         //전투중이 아니라면 카드를 뽑지 않음
-        if (!BattleManager.Inst.IsOnBattle) return;
+        if (!BattleManager.Inst.IsOnBattle) { return null; }
 
         // DOTween 시퀀스 생성
         Sequence sequence = DOTween.Sequence();
@@ -49,6 +49,8 @@ public class HandManager : MonoSingleton<HandManager>
             // 각 카드 생성 후 대기 시간 추가
             sequence.AppendInterval(0.2f);
         }
+
+        return sequence;
     }
 
     public void AddCardToHand(CardData cardData)

@@ -19,56 +19,75 @@ public class YareYare : MonsterBase
 
     public override void SetIntent()
     {
-        NowIntentNumber = Random.Range(0, 2);
+        base.SetIntent();
+        //NowIntentNumber = Random.Range(0, 2);]
+        NowIntentNumber = 0;
         if(NowIntentNumber == 0)
         {
-            SR_Intent.sprite = IconContainer.Inst.GetIntentIcon(E_IntentIconType.Attack);
+            SR_Intent.sprite = IconContainer.Inst.GetIntentIcon(E_IntentIconType.attack);
         }
         else
         {
-            SR_Intent.sprite = IconContainer.Inst.GetIntentIcon(E_IntentIconType.Shield);
+            SR_Intent.sprite = IconContainer.Inst.GetIntentIcon(E_IntentIconType.shield);
         }
     }
 
-    public override Sequence StartNowPattern()
+    public override IEnumerator StartNowPattern()
     {
-        if (NowIntentNumber == 0) return AttackSequence();
-
-        return GetShield();
+        if (NowIntentNumber == 0)
+        {
+            return AttackPatternCoroutine();
+        }
+        else
+        {
+            return GetShieldCoroutine();
+        }
     }
 
-    private Sequence AttackSequence()
+    private IEnumerator AttackPatternCoroutine()
     {
-        Sequence attackSequence = DOTween.Sequence();
-
-        attackSequence.Append(CreateAttackSequence(Dana, DanaBallon, Dana_Attack, Dana_Normal, times[0], times[1]))
-                      .Append(CreateAttackSequence(Nitmol, NitmolBallon, Nitmol_Attack, Nitmol_Normal, times[2], times[3]));
-
-        return attackSequence;
+        yield return StartCoroutine(CreateAttackCoroutine(Dana, DanaBallon, Dana_Attack, Dana_Normal, times[0], times[1]));
+        yield return StartCoroutine(CreateAttackCoroutine(Nitmol, NitmolBallon, Nitmol_Attack, Nitmol_Normal, times[2], times[3]));
+        Debug.Log("공격 두번 완료");
     }
 
-    private Sequence CreateAttackSequence(SpriteRenderer character, GameObject balloon, Sprite attackSprite, Sprite normalSprite, float moveTimeOut, float moveTimeIn)
+    private IEnumerator CreateAttackCoroutine(SpriteRenderer character, GameObject balloon, Sprite attackSprite, Sprite normalSprite, float moveTimeOut, float moveTimeIn)
     {
-        Sequence characterSequence = DOTween.Sequence();
+        character.sprite = attackSprite;
+        balloon.SetActive(true);
 
-        characterSequence.AppendCallback(() => character.sprite = attackSprite)
-                         .AppendCallback(() => balloon.SetActive(true))
-                         .Append(character.transform.DOMoveX(character.transform.position.x - 1, moveTimeOut))
-                         .AppendCallback(() => character.sprite = normalSprite)
-                         .AppendCallback(() => Attack(5))
-                         .Append(character.transform.DOMoveX(character.transform.position.x, moveTimeIn))
-                         .AppendCallback(() => balloon.SetActive(false));
+        Vector3 startPos = character.transform.position;
+        Vector3 targetPos = new Vector3(startPos.x - 1, startPos.y, startPos.z);
 
-        return characterSequence;
+        yield return MoveOverTime(character.transform, targetPos, moveTimeOut);
+
+        character.sprite = normalSprite;
+        StartCoroutine(MoveOverTime(character.transform, startPos, moveTimeIn));
+        yield return StartCoroutine(Attack(15));
+        yield return new WaitForSeconds(moveTimeIn);
+        balloon.SetActive(false);
+    }
+
+    private IEnumerator MoveOverTime(Transform transform, Vector3 targetPosition, float duration)
+    {
+        float elapsedTime = 0;
+        Vector3 startingPos = transform.position;
+
+        while (elapsedTime < duration)
+        {
+            transform.position = Vector3.Lerp(startingPos, targetPosition, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.position = targetPosition;
     }
 
 
-    private Sequence GetShield()
+    private IEnumerator GetShieldCoroutine()
     {
-        Debug.Log("방어");
-        Sequence attackSequence = DOTween.Sequence();
-        attackSequence.AppendCallback(() => AddBarrier(10));
-
-        return attackSequence;
+        AddBarrier(10);
+        Debug.Log("방어막 추가 완료");
+        yield return new WaitForSeconds(0.5f);
     }
 }

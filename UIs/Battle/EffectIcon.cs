@@ -11,7 +11,7 @@ public class EffectIcon : MonoBehaviour
 
     public void SetIcon(BuffBase effect)
     {
-        IMG_icon.sprite = IconContainer.Inst.GetEffectIcon(effect.BuffType);
+        IMG_icon.sprite = IconContainer.Inst.GetBuffIcon(effect.BuffType);
         TMP_Count.text = ((effect.Duration != -1) ? effect.Duration : effect.Stack).ToString();
     }
 }

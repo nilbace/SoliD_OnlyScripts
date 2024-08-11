@@ -20,11 +20,18 @@ public abstract class MonsterBase : UnitBase
     public virtual void Start()
     {
         _playerInks = new E_CardColor[2];
-        NowHp = MaxHP = StartHP;
+        MaxHP = StartHP; SetUpHP();
     }
 
     public virtual void SetIntent()
-    {   }
+    {
+        SR_Intent.DOFade(1, 0.4f);
+    }
+
+    public void HideIntent()
+    {
+        SR_Intent.DOFade(0, 0.4f);
+    }
 
     public void AddInk(E_CardColor color)
     {
@@ -87,9 +94,9 @@ public abstract class MonsterBase : UnitBase
         return Color.clear;
     }
 
-    public void Attack(float amount)
+    public IEnumerator Attack(float amount)
     {
-        BattleManager.Inst.MonsterAttackPlayer(amount);
+        return BattleManager.Inst.MonsterAttackPlayer(amount);
     }
 
     public void ApplyEffectToPlayer(E_EffectType type, float amount)
@@ -97,7 +104,7 @@ public abstract class MonsterBase : UnitBase
         BattleManager.Inst.MonsterApplyEffect_To_Player(type, amount);
     }
 
-    public virtual Sequence StartNowPattern()
+    public virtual IEnumerator StartNowPattern()
     {
         return null;
     }

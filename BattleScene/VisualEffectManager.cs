@@ -11,19 +11,6 @@ public class VisualEffectManager : MonoBehaviour
         Inst = this;
     }
 
-    public GameObject InstantiateEffect(E_BuffType effectType, Vector3 poz)
-    {
-        for (int i = 0; i < EffectList.Count; i++)
-        {
-            if (EffectList[i].name == effectType.ToString())
-            {
-                GameObject go = Instantiate(EffectList[i], poz, Quaternion.identity);
-                return go;
-            }
-        }
-        return null;
-    }
-
     public GameObject InstantiateEffect(E_EffectType effectType, Vector3 poz)
     {
         for (int i = 0; i < EffectList.Count; i++)
@@ -45,6 +32,6 @@ public class VisualEffectManager : MonoBehaviour
     public void InstantiateEffect(E_EffectType effectType, UnitBase Unit)
     {
         GameObject go = InstantiateEffect(effectType, Unit.transform.position);
-        go.transform.SetParent(Unit.transform);
+        //go.transform.SetParent(Unit.transform);
     }
 }

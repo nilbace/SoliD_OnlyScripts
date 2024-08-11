@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -12,18 +13,30 @@ public class TrialManager : MonoBehaviour
     public static TrialManager Inst;
 
     #region Relic
-    private List<RelicBase> RelicList;
+    private List<RelicBase> _relicList;
 
     private void Awake()
     {
         Inst = this;
-        RelicList = new List<RelicBase>();
+        _relicList = new List<RelicBase>();
     }
     public void AddRelic(E_RelicType relic)
     {
-        var relicClass = RelicFactory.GetRelic(relic);
-        BaseUI.Inst.RelicIMGs[RelicList.Count].sprite = IconContainer.Inst.GetRelicSprite(relic);
-        RelicList.Add(relicClass);
+        //var relicClass = RelicFactory.GetRelic(relic);
+        //BaseUI.Inst.RelicIMGs[RelicList.Count].sprite = IconContainer.Inst.GetRelicSprite(relic);
+        //RelicList.Add(relicClass);
+    }
+
+    public bool HasRelic(E_RelicType relicType)
+    {
+        foreach (var relic in _relicList)
+        {
+            if (relic.RelicType == relicType)
+            {
+                return true; // Relic found
+            }
+        }
+        return false; // Relic not found
     }
 
     

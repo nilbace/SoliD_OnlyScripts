@@ -24,6 +24,6 @@ public class UnitHpBar : MonoBehaviour
 
     void Update()
     {
-        HpSlider.value = Mathf.Clamp(((float)thisUnit.NowHp / (float)thisUnit.MaxHP), 0.045f, 1f);
+        HpSlider.value = Mathf.Clamp(((float)thisUnit.GetHP() / (float)thisUnit.MaxHP), 0.045f, 1f);
     }
 }

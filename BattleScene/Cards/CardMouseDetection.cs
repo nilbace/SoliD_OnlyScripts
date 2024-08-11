@@ -8,6 +8,7 @@ public class CardMouseDetection : MonoBehaviour
     SpriteRenderer _glowingBorder;
     private float _duration = 0.58f;
     private float _yOffset = -2.04f;
+    public bool IsDraggingOverUsingZone;
     public static bool IsUsing;
     private bool _needTarget;
     private CardGO thisCardGO;
@@ -24,7 +25,7 @@ public class CardMouseDetection : MonoBehaviour
     }
     void Update()
     {
-        if (!IsCanceled &&IsUsing && Input.GetMouseButtonUp(1))
+        if (!IsCanceled &&IsDraggingOverUsingZone && Input.GetMouseButtonUp(1))
         {
             CancelUse();
         }
@@ -32,7 +33,7 @@ public class CardMouseDetection : MonoBehaviour
     void OnMouseEnter()
     {
         transform.DOKill();
-        if (IsUsing) return;
+        if (IsDraggingOverUsingZone) return;
         if(_beforeMouseEnterPoz == Vector3.zero)
         {
             _beforeMouseEnterPoz = transform.position;
@@ -61,7 +62,7 @@ public class CardMouseDetection : MonoBehaviour
         //취소됐다면 작동하지않음
         if (IsCanceled) return;
 
-        if(!IsUsing)
+        if(!IsDraggingOverUsingZone)
         {
             Vector3 mousePosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 10); // 마우스 위치
             Vector3 objPosition = Camera.main.ScreenToWorldPoint(mousePosition); // 월드 좌표로 변환
@@ -69,22 +70,27 @@ public class CardMouseDetection : MonoBehaviour
         }
 
         //어느정도 들어 올려야 사용중 판정
-        if (!IsUsing && transform.position.y > _yOffset)
+        if (!IsDraggingOverUsingZone && transform.position.y > _yOffset)
         {
             //코스트 여유가 되지 않으면
             if(thisCardGO.thisCardData.CardCost > GameManager.Battle.NowEnergy)
             {
                 CancelUse();
             }
+            //이 카드의 사용자가 죽어있다면
+            else if(!BattleManager.Inst.GetPlayer(thisCardGO.thisCardData.CardOwner).isAlive())
+            {
+                CancelUse();
+            }
             else
             {
-                IsUsing = true;
+                IsDraggingOverUsingZone = true;
                 if (_needTarget) transform.DOMove(new Vector3(-0, -2.3f, 0), 0.15f);
             }
             
         }
 
-        if (IsUsing)
+        if (IsDraggingOverUsingZone)
         {
             if(_needTarget)
             {
@@ -101,10 +107,13 @@ public class CardMouseDetection : MonoBehaviour
 
     private void OnMouseUp()
     {
+        //취소됐다면(마우스 우클릭) 탈출
         if (IsCanceled) return;
 
+        //대상이 필요한 카드일때
         if(_needTarget)
         {
+            //몬스터를 조준했다면
             if(IsTargetMonster())
             {
                 UseCard();
@@ -114,6 +123,7 @@ public class CardMouseDetection : MonoBehaviour
                 CancelUse();
             }
         }
+        //대상이 필요 없는 카드일 경우
         else
         {
             UseCard();
@@ -122,7 +132,9 @@ public class CardMouseDetection : MonoBehaviour
 
     private void OnMouseExit()
     {
-        if (IsUsing) return;
+        //사용을 위해 들어올려져서 마우스 바깥으로 나갔다면 아래 명령들 무시
+        if (IsDraggingOverUsingZone) return;
+
         gameObject.transform.position = _beforeMouseEnterPoz;
         gameObject.transform.rotation = _beforeMouseEnterRotation;
         _beforeMouseEnterPoz = Vector3.zero;
@@ -188,8 +200,9 @@ public class CardMouseDetection : MonoBehaviour
 
     void CancelUse()
     {
+        transform.DOKill();
         IsCanceled = true;
-        IsUsing = false;
+        IsDraggingOverUsingZone = false;
         transform.localScale = Vector3.one * 0.5f;
 
         HideBorder();
@@ -200,10 +213,28 @@ public class CardMouseDetection : MonoBehaviour
     //카드 사용 이후 삭제
     void UseCard()
     {
+        //이미 다른 카드가 사용중이라면 사용 취소
+        if (IsUsing) { CancelUse(); return; }
+
+        IsUsing = true;
+        transform.DOKill();
         HideBorder();
         BezierCurveDrawer.Inst.lineRenderer.positionCount = 0; //선을 숨깁니다.
         CardEffectManager.NowCardData = thisCardGO.thisCardData;
+        CardEffectManager.NowCardGO = gameObject;
         CardEffectManager.Inst.UseCard();
-        HandManager.Inst.DiscardCardFromHand(gameObject);
+    }
+
+    private void OnDisable()
+    {
+        transform.DOKill();
+        if (BezierCurveDrawer.Inst.lineRenderer != null)
+        {
+            BezierCurveDrawer.Inst.lineRenderer.positionCount = 0; // 선을 숨깁니다.
+        }
+        else
+        {
+            // Handle the null case if needed, such as logging an error or warning
+        }
     }
 }

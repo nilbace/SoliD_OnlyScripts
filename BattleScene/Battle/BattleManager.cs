@@ -16,6 +16,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     public Action OnBattleStart;
     public Action OnPlayerTurnStart;
     public bool IsOnBattle;
+    public int TurnCount;
 
     //캐릭터 이동 관련
     [Tooltip("캐릭터 사이의 거리")]
@@ -58,27 +59,33 @@ public class BattleManager : MonoSingleton<BattleManager>
 
     public static bool TargetIsAlive()
     {
+        if (Inst.TargetMonster == null) return false;
         return Inst.TargetMonster.isAlive();
     }
 
     /// <summary>
     /// 적을 배치하고 플레이어 턴 시작하면 됨
-    /// TargetMonster를 비워줘야 함
+    /// TargetMonster를 비우고, MonsterUnits리스트 초기화 필요
     /// </summary>
     [ContextMenu("적 시작")]
     public void StartMinorBattle()
     {
         TargetMonster = null;
+        MonsterUnits = new List<MonsterBase>();
+        TurnCount = 0;
+        IsOnBattle = true;
         OnBattleStart?.Invoke();
         var seq = DOTween.Sequence();
         seq.AppendCallback(() =>
         {
             ResetDatas();
-            SetUpEnemy(MonsterContainer.Inst.GetAnyMinorMonster(), new Vector3(5, 0f, 0f));
+            SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(3.5f, 0f, 0f));
+            //SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.SeekeroftheRainbow), new Vector3(6.5f, 0f, 0f));
 
         })
             .AppendInterval(0.2f)
             .AppendCallback(StartPlayerTurn);
+        
     }
 
 
@@ -88,17 +95,23 @@ public class BattleManager : MonoSingleton<BattleManager>
         Monster.transform.position = poz;
         var MonsterBase = Monster.GetComponent<MonsterBase>();
         MonsterUnits.Add(MonsterBase);
-        MonsterBase.OnDead += () => ClearCheck();
         MonsterCount++;
     }
   
     public void StartPlayerTurn()
     {
-        IsOnBattle = true;
+        TurnCount++;
         FillEnergy();
-        HandManager.Inst.DrawCards(6);
+        DrawCards();
         ShowMonsterIntents();
         OnPlayerTurnStart?.Invoke();
+    }
+
+    private void DrawCards()
+    {
+        var seq = DOTween.Sequence();
+        seq.Append(HandManager.Inst.DrawCards(5)).
+            Append(HandManager.Inst.DrawCards(2));
     }
 
     public void EndPlayerTurn()
@@ -118,36 +131,71 @@ public class BattleManager : MonoSingleton<BattleManager>
             if (!mon.isAlive()) continue;
             mon.SetIntent();
         }
+
     }
 
     public void StartMonsterTurn()
     {
-        var sequence = DOTween.Sequence();
+        // 몬스터 턴 코루틴 시작
+        StartCoroutine(MonsterTurnCoroutine());
+    }
+
+    private IEnumerator MonsterTurnCoroutine()
+    {
+        // 의도를 이제 안보이게 처리
         foreach (MonsterBase mon in MonsterUnits)
         {
             if (!mon.isAlive()) continue;
-            sequence.Append(mon.StartNowPattern()).AppendInterval(0.5f);
+            mon.HideIntent();
         }
-        sequence.OnComplete(() => {
-            ReduceEffectDuration(isPlayer: false);
-            StartPlayerTurn();
-        });
+
+        // 몬스터마다 예정된 패턴 실행
+        foreach (MonsterBase mon in MonsterUnits)
+        {
+            if (!mon.isAlive()) continue;
+            yield return StartCoroutine(mon.StartNowPattern());
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        // 모든 몬스터 패턴이 끝난 후 효과 지속 시간 감소 및 플레이어 턴 시작
+        ReduceEffectDuration(isPlayer: false);
+        StartPlayerTurn();
     }
 
-    private void ClearCheck()
+    public void ClearCheck()
     {
-        MonsterCount--;
-        Debug.Log("체크");
-        if (MonsterCount <= 0) ClearBattle();
+        bool allMonstersDead = true;
+        for (int i = 0; i < MonsterUnits.Count; i++)
+        {
+            if (MonsterUnits[i].isAlive())
+            {
+                allMonstersDead = false;
+                break; 
+            }
+        }
+
+        if (allMonstersDead)
+        {
+            ClearBattle();
+        }
     }
 
+    //모든 몬스터 삭제
     [ContextMenu("클리어")]
     private void ClearBattle()
     {
-        IsOnBattle = false;
-        ClearPlayerStatusEffects();
-        HandManager.Inst.DiscardAllCardsFromHand();
-        GameManager.Reward.GenerateReward(E_RewardType.Normal);
+        // Execute the following actions after a 3-second delay using DOTween
+        DOVirtual.DelayedCall(1f, () =>
+        {
+            for (int i = 0; i < MonsterUnits.Count; i++)    
+            {
+                Destroy(MonsterUnits[i].gameObject);
+            }
+            IsOnBattle = false;
+            ClearPlayerStatusEffects();
+            HandManager.Inst.DiscardAllCardsFromHand();
+            GameManager.Reward.GenerateReward(E_RewardType.Normal);
+        });
     }
 
     private void ClearPlayerStatusEffects()
@@ -158,9 +206,9 @@ public class BattleManager : MonoSingleton<BattleManager>
         }
     }
 
-    public void MonsterAttackPlayer(float amount)
+    public IEnumerator MonsterAttackPlayer(float amount)
     {
-        PlayerUnits[0].GetDamage(amount);
+        return PlayerUnits[0].GetDamageCoroutine(amount);
     }
 
     public void MonsterApplyEffect_To_Player(E_EffectType buff, float amount)
@@ -213,7 +261,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         // Iterate over each player unit to find the one with the lowest health
         foreach (var player in PlayerUnits)
         {
-            if (player.NowHp < lowestHealthPlayer.NowHp)
+            if (player.GetHP() < lowestHealthPlayer.GetHP())
             {
                 lowestHealthPlayer = player; // Update to the current player if their health is lower
             }
@@ -331,6 +379,57 @@ public class BattleManager : MonoSingleton<BattleManager>
 
         return moveSequence;
     }
+
+    public IEnumerator ReorganizeCharactersWhenDeadCoroutine()
+    {
+        // 살아있는 캐릭터를 앞으로, 죽은 캐릭터를 뒤로 이동시키기 위해 리스트를 정렬합니다.
+        PlayerUnits.Sort((a, b) => a.isAlive() == b.isAlive() ? 0 : a.isAlive() ? -1 : 1);
+        Debug.Log("재정렬 완료");
+        Debug.Log($"현재 가장 앞 {PlayerUnits[0].gameObject.tag}");
+        foreach (UnitBase player in PlayerUnits)
+        {
+            Debug.Log(player.gameObject.tag + player.GetHP().ToString());
+        }
+
+        // 정렬된 리스트를 바탕으로 위치와 크기를 애니메이션합니다.
+        for (int i = 0; i < PlayerUnits.Count; i++)
+        {
+            var unit = PlayerUnits[i];
+            float targetX = -PlayerCharOffset * i;
+            Vector3 targetScale = Vector3.one * (unit.isAlive() ? (i == 0 ? FrontCharSize : BackCharSize) : BackCharSize);
+
+            // Start a coroutine to animate position and scale
+            StartCoroutine(AnimatePositionAndScale(unit, targetX, targetScale, PlayerMoveDuration));
+        }
+
+        // 모든 애니메이션이 완료될 때까지 대기
+        yield return new WaitForSeconds(PlayerMoveDuration);
+    }
+
+    private IEnumerator AnimatePositionAndScale(UnitBase unit, float targetX, Vector3 targetScale, float duration)
+    {
+        float elapsedTime = 0f;
+        Vector3 startingPosition = unit.transform.localPosition;
+        Vector3 startingScale = unit.transform.localScale;
+        Vector3 targetPosition = new Vector3(targetX, startingPosition.y, startingPosition.z);
+
+        while (elapsedTime < duration)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / duration;
+
+            // Lerp position and scale
+            unit.transform.localPosition = Vector3.Lerp(startingPosition, targetPosition, t);
+            unit.transform.localScale = Vector3.Lerp(startingScale, targetScale, t);
+
+            yield return null;
+        }
+
+        // Ensure final position and scale
+        unit.transform.localPosition = targetPosition;
+        unit.transform.localScale = targetScale;
+    }
+
 
     #endregion
 

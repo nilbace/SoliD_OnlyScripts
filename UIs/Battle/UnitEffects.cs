@@ -8,6 +8,7 @@ public class UnitEffects : MonoBehaviour
     private GameObject _iconGO;
     void Start()
     {
+        if (thisUnit == null) thisUnit = transform.parent.parent.GetComponent<UnitBase>();
         _iconGO = Resources.Load("Prefabs/IMG_EffectIcon") as GameObject;
         thisUnit.EffectUpdateAction += UpdateUI;
     }
