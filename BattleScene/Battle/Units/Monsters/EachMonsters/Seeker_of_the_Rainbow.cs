@@ -10,32 +10,32 @@ public class Seeker_of_the_Rainbow : MonsterBase
     public override void Start()
     {
         base.Start();
-        ApplyBuff(E_EffectType.LightThirst, 1);
+        ApplyBuffCoroutine(E_EffectType.LightThirst, 1);
     }
 
-    public override Sequence ApplyBuff(E_EffectType type, float amount)
+    public override IEnumerator ApplyBuffCoroutine(E_EffectType type, float amount)
     {
-
-        // 동일한 동작을 수행하는 효과 유형을 그룹화하여 처리합니다.
+        // Group similar effect types and handle them accordingly
         if (type == E_EffectType.Frost ||
             type == E_EffectType.Electrocution ||
             type == E_EffectType.Burn ||
             type == E_EffectType.Posion)
         {
-            return LightEat(); // LightEat 시퀀스를 반환
+            yield return StartCoroutine(LightEat()); // Start the LightEat coroutine
         }
-
-        return base.ApplyBuff(type, amount); // 기본 동작 반환
+        else
+        {
+            yield return base.ApplyBuffCoroutine(type, amount); // Default behavior
+        }
     }
 
-    private Sequence LightEat()
+    private IEnumerator LightEat()
     {
-        var seq = DOTween.Sequence();
+        // Heal over time or instant healing
+        yield return StartCoroutine(HealCoroutine(5));
 
-        // DOTween 시퀀스에 작업을 추가합니다.
-        seq.Append(Heal(5)).AppendCallback(() => ApplyBuff(E_EffectType.Strength, 5));
-
-        return seq; // 시퀀스를 반환
+        // After healing, apply another buff
+        yield return StartCoroutine(ApplyBuffCoroutine(E_EffectType.Strength, 5));
     }
 
     public override void SetIntent()

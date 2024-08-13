@@ -11,10 +11,10 @@ public class StoreRelic : MonoBehaviour
     {
         if (CanBuy())
         {
-            Debug.Log("유물 구매: " + RelicCost);
-            GameManager.UserData.UseMoonStone(RelicCost);
-            TrialManager.Inst.AddRelic(RelicType);
-            Destroy(gameObject); // 카드를 구매한 후 삭제
+            //Debug.Log("유물 구매: " + RelicCost);
+            //GameManager.UserData.UseMoonStone(RelicCost);
+            //TrialManager.Inst.AddRelic(RelicType);
+            //Destroy(gameObject); // 카드를 구매한 후 삭제
         }
         else
         {

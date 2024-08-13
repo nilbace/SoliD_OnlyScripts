@@ -10,7 +10,8 @@ public class DataParser : MonoBehaviour
     private List<CardEffectData> CardEffectList = new List<CardEffectData>();
     private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:O86";
     private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D55";
-    public Action OnCardParseEnd;
+    private const string URL_RelicData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1371132894&range=A2:G43";
+    public Action OnCardParseEnd { get; set; }
 
     private void Awake()
     {
@@ -23,6 +24,7 @@ public class DataParser : MonoBehaviour
 
     IEnumerator RequestDatas()
     {
+        StartCoroutine(RequestAndSetDayDatas(URL_RelicData, ProcessRelicData_To_List));
         yield return StartCoroutine(RequestAndSetDayDatas(URL_CardEffectData, ProcessCardEffectData_To_List));
         yield return StartCoroutine(RequestAndSetDayDatas(URL_CardData, ProcessCard_To_AllCardList));
         OnCardParseEnd?.Invoke();
@@ -51,7 +53,36 @@ public class DataParser : MonoBehaviour
         }
     }
 
-    void ProcessCardEffectData_To_List(string data)
+    private void ProcessRelicData_To_List(string data)
+    {
+        string[] lines = data.Substring(0, data.Length).Split('\t');
+        RelicBase relic = new RelicBase();
+        if (!int.TryParse(lines[0], out relic.RelicID))
+        {
+            Debug.LogError($"{lines[0]} : Failed to parse the string to RelicID.");
+        }
+        if (!Enum.TryParse(lines[1], out relic.RelicType))
+        {
+            Debug.LogError($"{lines[1]} : Failed to parse the string to RelicType enum.");
+        }
+        if (!Enum.TryParse(lines[2], out relic.RelicTier))
+        {
+            Debug.LogError($"{lines[2]} : Failed to parse the string to RelicTier enum.");
+        }
+        relic.RelicNameKor = lines[3];
+        relic.RelicInfoString = lines[4];
+        if (!Enum.TryParse(lines[5], out relic.TriggerType))
+        {
+            Debug.LogError($"{lines[5]} : Failed to parse the string to TriggerType enum.");
+        }
+        if (!bool.TryParse(lines[6], out relic.HasStack))
+        {
+            Debug.LogError($"{lines[6]} : Failed to parse the string to HasStack .");
+        }
+        GameManager.Card_RelicContainer.AllRelicList.Add(relic);
+    }
+
+    private void ProcessCardEffectData_To_List(string data)
     {
         string[] lines = data.Substring(0, data.Length).Split('\t');
         CardEffectData cardEffect = new CardEffectData();
@@ -71,7 +102,7 @@ public class DataParser : MonoBehaviour
         CardEffectList.Add(cardEffect);
     }
 
-    void ProcessCard_To_AllCardList(string data)
+    private void ProcessCard_To_AllCardList(string data)
     {
         string[] lines = data.Substring(0, data.Length).Split('\t');
         CardData cardData = new CardData();
@@ -155,7 +186,7 @@ public class DataParser : MonoBehaviour
         cardData.CardSpriteNameString = lines[13].Trim();
         cardData.DamageEffectType = lines[14].Trim();
         // 처리된 카드를 덱에 추가
-        GameManager.CardData.AllCardsList.Add(cardData);
+        GameManager.Card_RelicContainer.AddCardToAllCardList(cardData);
     }
 
     public CardEffectData GetCardEffectFromListByIndex(int index)

@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+public enum EnemyDifficultyType { Normal, Elite, Boss}
+
 /// <summary>
 /// 전투 대상, 턴, 캐릭터 이동 관리
 /// </summary>
@@ -17,6 +19,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     public Action OnPlayerTurnStart;
     public bool IsOnBattle;
     public int TurnCount;
+    public EnemyDifficultyType EnemyDifficultyType;
 
     //캐릭터 이동 관련
     [Tooltip("캐릭터 사이의 거리")]
@@ -67,25 +70,33 @@ public class BattleManager : MonoSingleton<BattleManager>
     /// 적을 배치하고 플레이어 턴 시작하면 됨
     /// TargetMonster를 비우고, MonsterUnits리스트 초기화 필요
     /// </summary>
-    [ContextMenu("적 시작")]
-    public void StartMinorBattle()
+    public void StartBattle()
+    {
+        StartCoroutine(StartBattleCoroutine());
+    }
+
+    public IEnumerator StartBattleCoroutine()
     {
         TargetMonster = null;
         MonsterUnits = new List<MonsterBase>();
         TurnCount = 0;
         IsOnBattle = true;
-        OnBattleStart?.Invoke();
-        var seq = DOTween.Sequence();
-        seq.AppendCallback(() =>
-        {
-            ResetDatas();
-            SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(3.5f, 0f, 0f));
-            //SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.SeekeroftheRainbow), new Vector3(6.5f, 0f, 0f));
 
-        })
-            .AppendInterval(0.2f)
-            .AppendCallback(StartPlayerTurn);
-        
+        // Reset data and set up enemies
+        ResetDatas();
+        SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(3.5f, 0f, 0f));
+        // Uncomment to set up another enemy
+        // SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.SeekeroftheRainbow), new Vector3(6.5f, 0f, 0f));
+
+        // Trigger OnBattleStart event
+        OnBattleStart?.Invoke();
+
+        // Wait for another 0.2 seconds
+        yield return new WaitForSeconds(0.2f);
+        yield return StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnBattleStart));
+
+        // Start the player's turn
+        StartCoroutine(StartPlayerTurnCoroutine());
     }
 
 
@@ -98,20 +109,21 @@ public class BattleManager : MonoSingleton<BattleManager>
         MonsterCount++;
     }
   
-    public void StartPlayerTurn()
+    public IEnumerator StartPlayerTurnCoroutine()
     {
         TurnCount++;
         FillEnergy();
-        DrawCards();
+        yield return DrawCards();
+
+        yield return StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnPlayerTurnStart));
+
         ShowMonsterIntents();
         OnPlayerTurnStart?.Invoke();
     }
 
-    private void DrawCards()
+    private IEnumerator DrawCards()
     {
-        var seq = DOTween.Sequence();
-        seq.Append(HandManager.Inst.DrawCards(5)).
-            Append(HandManager.Inst.DrawCards(2));
+        yield return StartCoroutine(HandManager.Inst.DrawCardsCoroutine(5));
     }
 
     public void EndPlayerTurn()
@@ -159,7 +171,7 @@ public class BattleManager : MonoSingleton<BattleManager>
 
         // 모든 몬스터 패턴이 끝난 후 효과 지속 시간 감소 및 플레이어 턴 시작
         ReduceEffectDuration(isPlayer: false);
-        StartPlayerTurn();
+        StartCoroutine(StartPlayerTurnCoroutine());
     }
 
     public void ClearCheck()
@@ -184,6 +196,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     [ContextMenu("클리어")]
     private void ClearBattle()
     {
+        StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnBattleEnd));
         // Execute the following actions after a 3-second delay using DOTween
         DOVirtual.DelayedCall(1f, () =>
         {
@@ -211,9 +224,9 @@ public class BattleManager : MonoSingleton<BattleManager>
         return PlayerUnits[0].GetDamageCoroutine(amount);
     }
 
-    public void MonsterApplyEffect_To_Player(E_EffectType buff, float amount)
+    public IEnumerator MonsterApplyEffect_To_Player(E_EffectType buff, float amount)
     {
-        PlayerUnits[0].ApplyBuff(buff, amount);
+        return PlayerUnits[0].ApplyBuffCoroutine(buff, amount);
     }
 
     public void ReduceEffectDuration(bool isPlayer)

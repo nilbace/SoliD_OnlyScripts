@@ -11,15 +11,15 @@ public class CardMouseDetection : MonoBehaviour
     public bool IsDraggingOverUsingZone;
     public static bool IsUsing;
     private bool _needTarget;
-    private CardGO thisCardGO;
+    private CardData _thisCardData;
     private bool IsCanceled; //우클릭으로 취소했는지
     private Vector3 _beforeMouseEnterPoz;
     private Quaternion _beforeMouseEnterRotation;
 
     private void Start()
     {
-        thisCardGO = GetComponent<CardGO>();
-        _needTarget = thisCardGO.thisCardData.NeedTarget;
+        _thisCardData = GetComponent<CardGO>().thisCardData;
+        _needTarget = _thisCardData.NeedTarget;
         Transform glowTransform = transform.Find("glow");
         _glowingBorder = glowTransform.GetComponent<SpriteRenderer>();
     }
@@ -73,12 +73,12 @@ public class CardMouseDetection : MonoBehaviour
         if (!IsDraggingOverUsingZone && transform.position.y > _yOffset)
         {
             //코스트 여유가 되지 않으면
-            if(thisCardGO.thisCardData.CardCost > GameManager.Battle.NowEnergy)
+            if(_thisCardData.CardCost > GameManager.Battle.NowEnergy)
             {
                 CancelUse();
             }
             //이 카드의 사용자가 죽어있다면
-            else if(!BattleManager.Inst.GetPlayer(thisCardGO.thisCardData.CardOwner).isAlive())
+            else if(!BattleManager.Inst.GetPlayer(_thisCardData.CardOwner).isAlive())
             {
                 CancelUse();
             }
@@ -133,13 +133,13 @@ public class CardMouseDetection : MonoBehaviour
     private void OnMouseExit()
     {
         //사용을 위해 들어올려져서 마우스 바깥으로 나갔다면 아래 명령들 무시
-        if (IsDraggingOverUsingZone) return;
+        if (IsDraggingOverUsingZone) {  return; }
 
         gameObject.transform.position = _beforeMouseEnterPoz;
         gameObject.transform.rotation = _beforeMouseEnterRotation;
         _beforeMouseEnterPoz = Vector3.zero;
+        HandManager.Inst.ArrangeCardsOnce();
         HideBorder();
-        HandManager.Inst.ArrangeCards();
     }
  
 
@@ -166,7 +166,7 @@ public class CardMouseDetection : MonoBehaviour
     
     void GlowBorder()
     {
-        if (thisCardGO.thisCardData.CardCost > GameManager.Battle.NowEnergy) return;
+        if (_thisCardData.CardCost > GameManager.Battle.NowEnergy) return;
         transform.DOScale(new Vector3(0.7f, 0.7f), _duration);
         Color originalColor = _glowingBorder.color;
         Color targetColor = new Color(originalColor.r, originalColor.g, originalColor.b, 1.0f); // 테두리 잔상을 빛나게
@@ -175,6 +175,12 @@ public class CardMouseDetection : MonoBehaviour
 
     void HideBorder()
     {
+        if (IsDraggingOverUsingZone)
+        {
+            _glowingBorder.DOKill();
+            _glowingBorder.color = Color.clear;
+            return;
+        }
         transform.DOScale(new Vector3(0.5f, 0.5f), _duration);
         Color originalColor = _glowingBorder.color;
         Color targetColor = new Color(originalColor.r, originalColor.g, originalColor.b, 0f); // 테두리 잔상을 투명하게 안보이게
@@ -220,9 +226,21 @@ public class CardMouseDetection : MonoBehaviour
         transform.DOKill();
         HideBorder();
         BezierCurveDrawer.Inst.lineRenderer.positionCount = 0; //선을 숨깁니다.
-        CardEffectManager.NowCardData = thisCardGO.thisCardData;
+        CardEffectManager.NowCardData = _thisCardData;
         CardEffectManager.NowCardGO = gameObject;
         CardEffectManager.Inst.UseCard();
+        // 하위 모든 스프라이트 랜더러와 TMPtext의 색을 투명하게 변경합니다.
+        var spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
+        foreach (var spriteRenderer in spriteRenderers)
+        {
+            spriteRenderer.color = new Color(spriteRenderer.color.r, spriteRenderer.color.g, spriteRenderer.color.b, 0);
+        }
+
+        var texts = GetComponentsInChildren<TMPro.TMP_Text>();
+        foreach (var text in texts)
+        {
+            text.color = new Color(text.color.r, text.color.g, text.color.b, 0);
+        }
     }
 
     private void OnDisable()

@@ -87,7 +87,7 @@ public class InkSkillManager : MonoBehaviour
         var Allies = BattleManager.Inst.PlayerUnits;
         foreach(UnitBase ally in Allies)
         {
-            ally.Heal(10);
+            ally.HealCoroutine(10);
         }
     }
     #endregion

@@ -31,12 +31,15 @@ public class Seolha : PlayableUnit
         LoadedBulletList = new List<E_BulletType>();
     }
 
-    public void AddBullet(E_BulletType bullet)
+    private IEnumerator AddBulletCoroutine(E_BulletType bullet)
     {
         LoadedBulletList.Add(bullet);
+
+        // Instantiate the bullet GameObject and set its parent
         GameObject bulletGO = Instantiate(BulletGO, BulletParentTR);
         bulletGO.GetComponent<Seolhabullet>().BulletType = bullet;
 
+        // Set the color of the bullet based on its type
         switch (bullet)
         {
             case E_BulletType.Basic:
@@ -55,50 +58,47 @@ public class Seolha : PlayableUnit
                 break;
         }
 
-        
+        yield return new WaitForSeconds(0.1f);
     }
 
-    [ContextMenu("탄환추가")]
-    public void AddRandomBullet()
+    public IEnumerator AddRandomBulletCoroutine()
     {
         int temp = Random.Range(1, 5);
-        AddBullet((E_BulletType)temp);
+        yield return StartCoroutine(AddBulletCoroutine((E_BulletType)temp));
     }
 
-    public Sequence ShootBulletToTarget()
-    {
-        var sequence = DOTween.Sequence(); // 새로운 시퀀스를 생성합니다.
 
+    public IEnumerator ShootBulletToTarget()
+    {
         if (LoadedBulletList.Count > 0)
         {
             E_BulletType bulletType = LoadedBulletList[0];
 
-            // 각 탄환 유형에 따라 해당 버프를 적용하는 시퀀스를 추가합니다.
+            // Apply the appropriate buff based on bullet type
             switch (bulletType)
             {
                 case E_BulletType.Frozen:
-                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Frost, 2));
+                    yield return StartCoroutine(BattleManager.Inst.TargetMonster.ApplyBuffCoroutine(E_EffectType.Frost, 2));
                     break;
                 case E_BulletType.Electric:
-                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Electrocution, 2));
+                    yield return StartCoroutine(BattleManager.Inst.TargetMonster.ApplyBuffCoroutine(E_EffectType.Electrocution, 2));
                     break;
                 case E_BulletType.Fire:
-                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Burn, 2));
+                    yield return StartCoroutine(BattleManager.Inst.TargetMonster.ApplyBuffCoroutine(E_EffectType.Burn, 2));
                     break;
                 case E_BulletType.Posion:
-                    sequence.Append(BattleManager.Inst.TargetMonster.ApplyBuff(E_EffectType.Posion, 2));
+                    yield return StartCoroutine(BattleManager.Inst.TargetMonster.ApplyBuffCoroutine(E_EffectType.Posion, 2));
                     break;
             }
 
-            // 시퀀스가 끝난 후 탄환을 제거하고 오브젝트를 파괴하는 작업을 추가합니다.
-            sequence.AppendCallback(() =>
-            {
-                LoadedBulletList.RemoveAt(0);
-                Destroy(BulletParentTR.transform.GetChild(0).gameObject);
-            });
-        }
+            // After the buff is applied, remove the bullet and destroy the corresponding object
+            LoadedBulletList.RemoveAt(0);
 
-        return sequence; // 시퀀스를 반환합니다.
+            if (BulletParentTR.childCount > 0)
+            {
+                Destroy(BulletParentTR.GetChild(0).gameObject);
+            }
+        }
     }
 
     private void AddStackWhenAttackCardUsed()

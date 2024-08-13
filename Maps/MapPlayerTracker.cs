@@ -92,7 +92,7 @@ namespace Map
             switch (mapNode.Node.nodeType)
             {
                 case NodeType.MinorEnemy:
-                    BattleManager.Inst.StartMinorBattle();
+                    BattleManager.Inst.StartBattle();
                     break;
 
                 case NodeType.EliteEnemy:

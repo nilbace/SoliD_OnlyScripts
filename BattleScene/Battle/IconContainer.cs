@@ -58,6 +58,14 @@ public class IconContainer : MonoBehaviour
 
     public Sprite GetRelicSprite(E_RelicType relic)
     {
-        return RelicIcons[(int)relic];
+        foreach (var icon in RelicIcons)
+        {
+            if (icon.name == relic.ToString())
+            {
+                return icon;
+            }
+        }
+
+        return null;
     }
 }

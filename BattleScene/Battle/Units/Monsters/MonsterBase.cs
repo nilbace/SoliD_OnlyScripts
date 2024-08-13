@@ -99,9 +99,9 @@ public abstract class MonsterBase : UnitBase
         return BattleManager.Inst.MonsterAttackPlayer(amount);
     }
 
-    public void ApplyEffectToPlayer(E_EffectType type, float amount)
+    public IEnumerator ApplyEffectToPlayer(E_EffectType type, float amount)
     {
-        BattleManager.Inst.MonsterApplyEffect_To_Player(type, amount);
+        return BattleManager.Inst.MonsterApplyEffect_To_Player(type, amount);
     }
 
     public virtual IEnumerator StartNowPattern()

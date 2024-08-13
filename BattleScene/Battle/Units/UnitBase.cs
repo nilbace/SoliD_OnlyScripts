@@ -20,7 +20,6 @@ public abstract class UnitBase : MonoBehaviour
     protected int _barrierAmount;
     [HideInInspector] public bool IsInjured;
     [HideInInspector] public bool IsChained;
-    private bool _isDead;
     public List<BuffBase> BuffList =new List<BuffBase>();
     public Action EffectUpdateAction;
 
@@ -33,12 +32,21 @@ public abstract class UnitBase : MonoBehaviour
     }
 
 
-    public virtual void AddBarrier(float amount) 
+    public virtual IEnumerator AddBarrierCoroutine(float amount)
     {
         int intAmount = (int)amount;
         _barrierAmount += intAmount;
-        if(amount>0) VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Shield, transform.position);
+
+        // Visual effect or delay logic
+        if (amount > 0)
+        {
+            // Instantiate visual effect
+            VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Shield, this);
+
+            yield return new WaitForSeconds(0.5f); // Adjust the time as needed
+        }
     }
+
 
     public virtual void UpdateBarrier(float amount)
     {
@@ -91,16 +99,13 @@ public abstract class UnitBase : MonoBehaviour
         // Check if the character is dead
         if (_nowHp <= 0)
         {
-            Debug.Log("죽음 처리 시작");
             yield return StartCoroutine(DeadCoroutine());
         }
-
-        Debug.Log($"GetDamage 처리 완료, 현재 HP: {_nowHp}");
     }
 
 
 
-    private void ApplyStatusEffect(BuffBase effect)
+    private void ApplyBuff(BuffBase effect)
     {
         effect.ApplyEffect(this);
         EffectUpdateAction?.Invoke();
@@ -122,18 +127,12 @@ public abstract class UnitBase : MonoBehaviour
         }
     }
 
-    public virtual Sequence ApplyBuff(E_EffectType type, float amount)
+    public virtual IEnumerator ApplyBuffCoroutine(E_EffectType type, float amount)
     {
-        // 새로운 DOTween 시퀀스를 생성합니다.
-        Sequence sequence = DOTween.Sequence();
-
-        // 1초 동안 효과를 적용하는 시퀀스를 정의합니다.
-        sequence.AppendCallback(() => ApplyStatusEffect(BuffFactory.GetBuffByType(type, amount)))
-                .AppendCallback(() => VisualEffectManager.Inst.InstantiateEffect(type, transform.position))
-                .AppendInterval(0.5f); // 추가로 초 대기
-
-        // 시퀀스를 반환합니다.
-        return sequence;
+        Debug.Log($"{gameObject.name} 에게 {type}을 {amount} 만큼 부여");
+        ApplyBuff(BuffFactory.GetBuffByType(type, amount));
+        VisualEffectManager.Inst.InstantiateEffect(type, this);
+        yield return new WaitForSeconds(0.5f);
     }
 
     public bool HasBuff(E_EffectType effectType)
@@ -180,8 +179,7 @@ public abstract class UnitBase : MonoBehaviour
         // 자식 오브젝트의 모든 SpriteRenderer에 대한 알파값 조절
         foreach (SpriteRenderer spriteRenderer in GetComponentsInChildren<SpriteRenderer>())
         {
-            Debug.Log(spriteRenderer.gameObject.name);
-
+            if (spriteRenderer.GetComponent<DestroyAfterAnimation>() != null) continue;
             StartCoroutine(FadeOut(spriteRenderer));
         }
 
@@ -199,8 +197,6 @@ public abstract class UnitBase : MonoBehaviour
 
         // 모든 페이드 아웃이 끝날 때까지 대기
         yield return new WaitForSeconds(1f);
-
-        Debug.Log("DeadCoroutine 완료");
     }
 
     // Fade out a SpriteRenderer over time
@@ -217,7 +213,6 @@ public abstract class UnitBase : MonoBehaviour
             spriteRenderer.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
             yield return null;
         }
-
         spriteRenderer.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
     }
 
@@ -235,7 +230,6 @@ public abstract class UnitBase : MonoBehaviour
             image.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
             yield return null;
         }
-
         image.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
     }
 
@@ -253,29 +247,18 @@ public abstract class UnitBase : MonoBehaviour
             tmpText.color = new Color(initialColor.r, initialColor.g, initialColor.b, alpha);
             yield return null;
         }
-
         tmpText.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
     }
 
 
-
-    public Sequence Heal(float amount)
+    public IEnumerator HealCoroutine(float amount)
     {
-        var seq = DOTween.Sequence();
-
-        seq.AppendCallback(() =>
-        {
-            var resultAmount = (int)(HasBuff(E_EffectType.Blessing) ? amount * 1.5f : amount);
-            _nowHp += resultAmount;
-            VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Heal, this);
-        }).AppendInterval(0.5f);
-
-        return seq;
+        var resultAmount = (int)(HasBuff(E_EffectType.Blessing) ? amount * 1.5f : amount);
+        _nowHp += resultAmount;
+        VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Heal, this);
+        yield return new WaitForSeconds(0.5f);
     }
-
     
-
-
     [ContextMenu("Show Active Effects")]
     private void ShowActiveEffects()
     {

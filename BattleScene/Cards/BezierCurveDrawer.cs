@@ -38,7 +38,6 @@ public class BezierCurveDrawer : MonoBehaviour
             Vector3 position = CalculateQuadraticBezierPoint(t, endPos, controlPoint, startPos);
             lineRenderer.SetPosition(i, position);
         }
-
     }
 
     Vector3 CalculateQuadraticBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)

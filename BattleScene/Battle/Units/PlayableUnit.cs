@@ -21,15 +21,12 @@ public class PlayableUnit : UnitBase
         s_sharedBarrier = intAmount;
     }
 
-    public override void AddBarrier(float barrier)
+    public override IEnumerator AddBarrierCoroutine(float barrier)
     {
         // 결정화 효과가 있는 경우 방어막 증가량 증가
         var resultAmount = (int)(HasBuff(E_EffectType.Crystallization) ? barrier * 1.5f : barrier);
 
-        // 방어막을 추가하고 시각 효과 생성
-        s_sharedBarrier += resultAmount;
-        VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Shield, this);
-        Debug.Log($"{gameObject.name}이 방어막 {resultAmount}만큼 획득");
+        yield return base.AddBarrierCoroutine(resultAmount);
     }
  
     

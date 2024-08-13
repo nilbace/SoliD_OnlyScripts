@@ -413,7 +413,7 @@ public class CombatStance : BuffBase
 
     public override void NextTurnStarted(UnitBase unit)
     {
-        HandManager.Inst.AddCardToHand(87);
+        HandManager.Inst.AddCardToHandCoroutine(GameManager.Card_RelicContainer.GetCardDataByIndex(87));
     }
 }
 

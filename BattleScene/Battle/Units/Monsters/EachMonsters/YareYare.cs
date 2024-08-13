@@ -48,7 +48,6 @@ public class YareYare : MonsterBase
     {
         yield return StartCoroutine(CreateAttackCoroutine(Dana, DanaBallon, Dana_Attack, Dana_Normal, times[0], times[1]));
         yield return StartCoroutine(CreateAttackCoroutine(Nitmol, NitmolBallon, Nitmol_Attack, Nitmol_Normal, times[2], times[3]));
-        Debug.Log("공격 두번 완료");
     }
 
     private IEnumerator CreateAttackCoroutine(SpriteRenderer character, GameObject balloon, Sprite attackSprite, Sprite normalSprite, float moveTimeOut, float moveTimeIn)
@@ -86,8 +85,6 @@ public class YareYare : MonsterBase
 
     private IEnumerator GetShieldCoroutine()
     {
-        AddBarrier(10);
-        Debug.Log("방어막 추가 완료");
-        yield return new WaitForSeconds(0.5f);
+        yield return AddBarrierCoroutine(10);
     }
 }

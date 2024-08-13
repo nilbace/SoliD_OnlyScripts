@@ -11,7 +11,7 @@ public class VisualEffectManager : MonoBehaviour
         Inst = this;
     }
 
-    public GameObject InstantiateEffect(E_EffectType effectType, Vector3 poz)
+    private GameObject InstantiateEffect(E_EffectType effectType, Vector3 poz)
     {
         for (int i = 0; i < EffectList.Count; i++)
         {
@@ -24,14 +24,14 @@ public class VisualEffectManager : MonoBehaviour
         return null;
     }
 
-    public void InstantiateEffect(E_EffectType effectType, GameObject Go)
-    {
-        InstantiateEffect(effectType, Go.transform.position);
-    }
-
     public void InstantiateEffect(E_EffectType effectType, UnitBase Unit)
     {
         GameObject go = InstantiateEffect(effectType, Unit.transform.position);
-        //go.transform.SetParent(Unit.transform);
+        if (go == null)
+        {
+            //Debug.Log("ÀÌÆåÆ® ¾øÀ½");
+            return;
+        }
+        go.transform.SetParent(Unit.transform);
     }
 }

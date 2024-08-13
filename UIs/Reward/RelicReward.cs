@@ -21,7 +21,7 @@ public class RelicReward : MonoBehaviour
 
     public void OnClick()
     {
-        TrialManager.Inst.AddRelic(S_RelicType);
+        //TrialManager.Inst.AddRelic(S_RelicType);
     }
 
 }

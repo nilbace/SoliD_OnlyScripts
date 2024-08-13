@@ -9,11 +9,11 @@ public class GameManager : MonoBehaviour
     public static GameManager Inst { get { Init(); return s_instance; } }
 
     UserData _userData = new UserData();
-    CardDataManager _cardData = new CardDataManager();
+    Card_RelicContainer _cardData = new Card_RelicContainer();
     RewardManager _reward = new RewardManager();
     public static BattleManager Battle { get { return BattleManager.Inst; } }
     public static UserData UserData { get { return Inst._userData; } }
-    public static CardDataManager CardData { get { return Inst._cardData; } }
+    public static Card_RelicContainer Card_RelicContainer { get { return Inst._cardData; } }
     public static RewardManager Reward { get { return Inst._reward; } }
     
 

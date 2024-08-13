@@ -10,15 +10,16 @@ public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
     private void Start()
     {
         DataParser.Inst.OnCardParseEnd += MakeBaseDeck;
-        BattleManager.Inst.OnBattleStart += StartBattle;
+        BattleManager.Inst.OnBattleStart += SetUpPiles;
     }
     public void MakeBaseDeck()
     {
         Debug.Log("덱 생성 완료");
-        TrialManager.Inst.UserDeck.AddRange(GameManager.CardData.AllCardsList.GetRange(0, 20));
+        TrialManager.Inst.UserDeck.AddRange(GameManager.Card_RelicContainer.GetBaseDeck());
+        TrialManager.Inst.AddRelics(GameManager.Card_RelicContainer.GetRandomRelics(10));
     }
 
-    public void StartBattle()
+    public void SetUpPiles()
     {
         DrawPile = new List<CardData>(TrialManager.Inst.UserDeck);
         //Shuffle(DrawPile); // 드로우 파일의 모든 카드 섞기

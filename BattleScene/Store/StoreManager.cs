@@ -52,17 +52,17 @@ public class StoreManager : MonoBehaviour
     }
     private void ShowCards()
     {
-        var Cards = GameManager.CardData.AllCardsList;
-
+        //일반 등급 카드 5장 반환
+        var randomCards = GameManager.Card_RelicContainer.GetRandomCardDatas(5, E_CardTier.Normal);
         for (int i = 0; i < 5; i++)
         {
             GameObject newCard = Instantiate(CardGO, FirstCardPoz + new Vector3(i * spacing, 0, 0), Quaternion.identity, ItemsParentTR);
             var storemouse = newCard.AddComponent<StoreCard>();
 
 
-            var randIndex = Random.Range(0, Cards.Count);
+            
             var newcardData = newCard.GetComponent<CardGO>();
-            newcardData.thisCardData = Cards[randIndex];
+            newcardData.thisCardData = randomCards[i];
 
             newcardData.SetUpCardSprite();
 
