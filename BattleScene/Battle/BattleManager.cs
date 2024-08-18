@@ -84,9 +84,9 @@ public class BattleManager : MonoSingleton<BattleManager>
 
         // Reset data and set up enemies
         ResetDatas();
-        SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(3.5f, 0f, 0f));
+        //SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(3.5f, 0f, 0f));
         // Uncomment to set up another enemy
-        // SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.SeekeroftheRainbow), new Vector3(6.5f, 0f, 0f));
+         SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(5f, 0f, 0f));
 
         // Trigger OnBattleStart event
         OnBattleStart?.Invoke();

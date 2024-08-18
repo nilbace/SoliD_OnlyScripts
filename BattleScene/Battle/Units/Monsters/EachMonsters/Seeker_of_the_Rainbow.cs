@@ -7,6 +7,9 @@ public class Seeker_of_the_Rainbow : MonsterBase
 {
     public float moveTimeOut;
     public float moveTimeIn;
+    public Sprite StandSprite;
+    public Sprite AttackSprite;
+    public SpriteRenderer SR_Monster;
     public override void Start()
     {
         base.Start();
@@ -44,19 +47,38 @@ public class Seeker_of_the_Rainbow : MonsterBase
         SR_Intent.sprite = IconContainer.Inst.GetIntentIcon(E_IntentIconType.attack);
     }
 
-    //public override IEnumerator StartNowPattern()
-    //{
-    //    return AttackSequence();
-    //}
+    public override IEnumerator StartNowPattern()
+    {
+        yield return StartCoroutine(AttackCoroutine(moveTimeOut, moveTimeIn));
+    }
 
-    //private Sequence AttackSequence()
-    //{
-    //    Sequence attackSequence = DOTween.Sequence();
+    private IEnumerator AttackCoroutine(float moveTimeOut, float moveTimeIn)
+    {
+        SR_Monster.sprite = AttackSprite;
 
-    //    attackSequence.Append(transform.DOMoveX(transform.position.x - 1, moveTimeOut))
-    //                     .Append(Attack(5))
-    //                     .Append(transform.DOMoveX(transform.position.x, moveTimeIn));
+        Vector3 startPos = SR_Monster.transform.position;
+        Vector3 targetPos = new Vector3(startPos.x - 2, startPos.y, startPos.z);
 
-    //    return attackSequence;
-    //}
+        yield return MoveOverTime(transform, targetPos, moveTimeOut);
+        yield return new WaitForSeconds(0.2f);
+        SR_Monster.sprite = StandSprite;
+        StartCoroutine(MoveOverTime(transform, startPos, moveTimeIn));
+        yield return StartCoroutine(Attack(15));
+        yield return new WaitForSeconds(moveTimeIn);
+    }
+
+    private IEnumerator MoveOverTime(Transform transform, Vector3 targetPosition, float duration)
+    {
+        float elapsedTime = 0;
+        Vector3 startingPos = transform.position;
+
+        while (elapsedTime < duration)
+        {
+            transform.position = Vector3.Lerp(startingPos, targetPosition, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.position = targetPosition;
+    }
 }
