@@ -216,7 +216,6 @@ public class CardMouseDetection : MonoBehaviour
         HandManager.Inst.ArrangeCardsOnce();
     }
 
-    //카드 사용 이후 삭제
     void UseCard()
     {
         //이미 다른 카드가 사용중이라면 사용 취소
@@ -225,6 +224,8 @@ public class CardMouseDetection : MonoBehaviour
         IsUsing = true;
         transform.DOKill();
         HideBorder();
+        HandManager.Inst.CardsInMyHandList.Remove(gameObject);
+        StartCoroutine(HandManager.Inst.ArrangeCardsCoroutine());
         BezierCurveDrawer.Inst.lineRenderer.positionCount = 0; //선을 숨깁니다.
         CardEffectManager.NowCardData = _thisCardData;
         CardEffectManager.NowCardGO = gameObject;

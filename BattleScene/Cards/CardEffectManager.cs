@@ -5,6 +5,10 @@ using System.Linq;
 using UnityEngine;
 using System;
 
+/// <summary>
+/// 카드 사용시 어떤 식으로 효과가 전개될 것인지 담당하는 스크립트
+/// NowCardData를 전달받고 UseCard를 실행
+/// </summary>
 public class CardEffectManager : MonoBehaviour
 {
     public static CardEffectManager Inst;
@@ -25,27 +29,27 @@ public class CardEffectManager : MonoBehaviour
 
     private IEnumerator UseCardCoroutine()
     {
+        //카드에 필요한 코스트 사용
         GameManager.Battle.UseEnergy(NowCardData.CardCost);
+        //카드 사용자가 앞으로 나섬
         GameManager.Battle.MoveCharFront(NowCardData.CardOwner);
 
-        // Exit if the battle is over
-        if (!BattleManager.Inst.IsOnBattle) yield break;
-
-        // Activate card effects sequentially
+        //각 카드 효과 발동
         foreach (CardEffectData cardEffectData in NowCardData.CardEffectList)
         {
-            // Exit if the battle is over
+            //전투중이 아니라면 취소
             if (!BattleManager.Inst.IsOnBattle) yield break;
 
-            // Specific condition flag to exit
+            //탈출용 트리거(30번 및 기타 효과와 연계 실패시 작동)
             bool shouldBreak = false;
 
-            // Get target units
+            //대상 유닛들을 찾아서
             var targets = GameManager.Battle.GetProperUnits(NowCardData.CardOwner, cardEffectData.TargetType);
 
-            // Apply the appropriate effect to targets
+            //알맞은 대상에 알맞은 효과를 작동
             switch (cardEffectData.CardEffectType)
             {
+                //대기
                 case E_EffectType.Interval:
                     yield return new WaitForSeconds(cardEffectData.Amount);
                     break;
@@ -76,6 +80,7 @@ public class CardEffectManager : MonoBehaviour
                     }
                     break;
 
+                    //검정색을 추가함
                 case E_EffectType.Black:
                     foreach (UnitBase target in targets)
                     {
@@ -88,20 +93,24 @@ public class CardEffectManager : MonoBehaviour
                     }
                     break;
 
+                    //에너지 회복
                 case E_EffectType.Energy:
                     BattleManager.Inst.AddEnergy(cardEffectData.Amount);
                     yield return null;
                     break;
 
+                    //카드 드로우
                 case E_EffectType.DrawCard:
                     yield return StartCoroutine(HandManager.Inst.DrawCardsCoroutine((int)cardEffectData.Amount));
                     break;
 
+                    //랜덤 카드 손에서 버리기
                 case E_EffectType.DiscardRandomCard:
                     HandManager.Inst.DiscardRandomCardFromHand();
                     yield return null;
                     break;
 
+                    //특정 효과가 있다면 다음 로직 작동, 없다면 여기서 끝
                 case E_EffectType.CheckStatusEffect:
                     if (!BattleManager.Inst.IsOnBattle || !BattleManager.Inst.TargetMonster.isAlive() || !BattleManager.Inst.TargetMonster.HasBuff((E_EffectType)((int)cardEffectData.Amount)))
                     {
@@ -109,6 +118,7 @@ public class CardEffectManager : MonoBehaviour
                     }
                     break;
 
+                //디버프가 있는지 체크하여 있다면 다음 로직 작동, 없다면 여기서 끝
                 case E_EffectType.CheckHasDebuff:
                     if (!BattleManager.Inst.IsOnBattle || !BattleManager.Inst.TargetMonster.isAlive() || !BattleManager.Inst.TargetMonster.HasDebuff())
                     {
@@ -116,6 +126,7 @@ public class CardEffectManager : MonoBehaviour
                     }
                     break;
 
+                    //HP가 가장 적은 아군 회복
                 case E_EffectType.HealLowestHPAlly:
                     BattleManager.Inst.GetLowestHealthPlayer().HealCoroutine(cardEffectData.Amount);
                     yield return null;
@@ -126,6 +137,7 @@ public class CardEffectManager : MonoBehaviour
                     yield return null;
                     break;
 
+                    //Index번호 카드를 패에 추가함
                 case E_EffectType.MakeCardToHand:
                     {
                         CardData tempcard = GameManager.Card_RelicContainer.GetCardDataByIndex((int)cardEffectData.Amount);
@@ -374,7 +386,7 @@ public class CardEffectManager : MonoBehaviour
                     break;
                 #endregion
 
-                // Buff and debuff effects
+                //각종 버프 디버프 적용
                 default:
                     foreach (UnitBase target in targets)
                     {
@@ -386,7 +398,7 @@ public class CardEffectManager : MonoBehaviour
             if (shouldBreak) break;
         }
 
-        // Apply ink if the card is of attack type
+        //공격 카드를 사용하였다면 추가로 처리할 로직
         if (NowCardData.CardType == E_CardType.Attack)
         {
             if (NowCardData.NeedTarget)
@@ -404,11 +416,13 @@ public class CardEffectManager : MonoBehaviour
             }
         }
 
+        //카드와 연계된 유물 작동
         yield return StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnCardUse));
-        // Invoke after card use
         OnCardEffectUsed?.Invoke();
 
-        // Discard the card and update state
+        //카드 사용 이후 로직들
+
+        //버리거나 소멸될 카드들 처리
         if (NowCardData.WillExpire)
         {
             HandManager.Inst.ExpireCardFromHand(NowCardGO);
@@ -418,9 +432,13 @@ public class CardEffectManager : MonoBehaviour
             HandManager.Inst.DiscardCardFromHand(NowCardGO);
         }
 
+        //카드 사용 종료
         CardMouseDetection.IsUsing = false;
+        //적이 죽었는지 확인
         BattleManager.Inst.ClearCheck();
     }
+
+    //추가 데미지가 있는지 확인하여 더함
     private float AdditionalAttack()
     {
         float damage = 0;

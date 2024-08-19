@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public enum EnemyDifficultyType { Normal, Elite, Boss}
 
 /// <summary>
 /// 전투 대상, 턴, 캐릭터 이동 관리
 /// </summary>
+/// TODO  90번째줄 수정 예정
+
 public class BattleManager : MonoSingleton<BattleManager>
 {
     public List<UnitBase> PlayerUnits;
@@ -66,15 +67,16 @@ public class BattleManager : MonoSingleton<BattleManager>
         return Inst.TargetMonster.isAlive();
     }
 
-    /// <summary>
-    /// 적을 배치하고 플레이어 턴 시작하면 됨
-    /// TargetMonster를 비우고, MonsterUnits리스트 초기화 필요
-    /// </summary>
+ 
     public void StartBattle()
     {
         StartCoroutine(StartBattleCoroutine());
     }
 
+    /// <summary>
+    /// 적을 배치하고 플레이어 턴 시작하면 됨
+    /// TargetMonster를 비우고, MonsterUnits리스트 초기화 필요
+    /// </summary>
     public IEnumerator StartBattleCoroutine()
     {
         TargetMonster = null;
@@ -82,25 +84,30 @@ public class BattleManager : MonoSingleton<BattleManager>
         TurnCount = 0;
         IsOnBattle = true;
 
-        // Reset data and set up enemies
+        // 데이터 초기화 및 적 설정
         ResetDatas();
-        //SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(3.5f, 0f, 0f));
-        // Uncomment to set up another enemy
-         SetUpEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(5f, 0f, 0f));
 
-        // Trigger OnBattleStart event
+        //Todo 각 전투마다 적절한 규칙에 따라 적 설정하도록 변경 
+        SpawnEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(5f, 0f, 0f));
+
+        // 전투 시작 이벤트 트리거
         OnBattleStart?.Invoke();
 
-        // Wait for another 0.2 seconds
+        // 0.2초 대기 이후 전투 시작시 발동되는 유물들 발동
         yield return new WaitForSeconds(0.2f);
         yield return StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnBattleStart));
 
-        // Start the player's turn
+        // 플레이어 턴 시작
         StartCoroutine(StartPlayerTurnCoroutine());
     }
 
 
-    private void SetUpEnemy(GameObject monsterGO, Vector3 poz)
+    /// <summary>
+    /// 적을 스폰하는 로직
+    /// </summary>
+    /// <param name="monsterGO"></param>
+    /// <param name="poz"></param>
+    private void SpawnEnemy(GameObject monsterGO, Vector3 poz)
     {
         var Monster = Instantiate(monsterGO);
         Monster.transform.position = poz;
@@ -108,7 +115,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         MonsterUnits.Add(MonsterBase);
         MonsterCount++;
     }
-  
+    
     public IEnumerator StartPlayerTurnCoroutine()
     {
         TurnCount++;
@@ -133,9 +140,10 @@ public class BattleManager : MonoSingleton<BattleManager>
         ReduceEffectDuration(isPlayer: true);
         StartMonsterTurn();
     }
-
     
-
+    /// <summary>
+    /// 해당 턴에 몬스터가 어떤 행동을 할지 의도를 보여줌
+    /// </summary>
     void ShowMonsterIntents()
     {
         foreach(MonsterBase mon in MonsterUnits)
@@ -148,7 +156,6 @@ public class BattleManager : MonoSingleton<BattleManager>
 
     public void StartMonsterTurn()
     {
-        // 몬스터 턴 코루틴 시작
         StartCoroutine(MonsterTurnCoroutine());
     }
 
@@ -174,6 +181,9 @@ public class BattleManager : MonoSingleton<BattleManager>
         StartCoroutine(StartPlayerTurnCoroutine());
     }
 
+    /// <summary>
+    /// 외부 호출용 함수로 전투가 끝났는지 확인
+    /// </summary>
     public void ClearCheck()
     {
         bool allMonstersDead = true;
@@ -192,12 +202,10 @@ public class BattleManager : MonoSingleton<BattleManager>
         }
     }
 
-    //모든 몬스터 삭제
     [ContextMenu("클리어")]
     private void ClearBattle()
     {
         StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnBattleEnd));
-        // Execute the following actions after a 3-second delay using DOTween
         DOVirtual.DelayedCall(1f, () =>
         {
             for (int i = 0; i < MonsterUnits.Count; i++)    
@@ -219,6 +227,8 @@ public class BattleManager : MonoSingleton<BattleManager>
         }
     }
 
+
+    #region MonsterBase 호출용 함수 목록
     public IEnumerator MonsterAttackPlayer(float amount)
     {
         return PlayerUnits[0].GetDamageCoroutine(amount);
@@ -228,6 +238,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     {
         return PlayerUnits[0].ApplyBuffCoroutine(buff, amount);
     }
+    #endregion
 
     public void ReduceEffectDuration(bool isPlayer)
     {
@@ -342,7 +353,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         return new List<UnitBase>();
     }
 
-    #region 캐릭터 이동 
+    #region 캐릭터 이동 관련
     public Sequence MoveCharFront(E_CharName cardOwner)
     {
         // cardOwner와 일치하는 캐릭터를 찾습니다.

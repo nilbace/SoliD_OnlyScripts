@@ -4,6 +4,9 @@ using UnityEngine;
 using DG.Tweening;
 using System.Linq;
 
+/// <summary>
+/// 손패에 들고 있는 카드들의 위치와 애니메이션을 관리해주는 스크립트
+/// </summary>
 public class HandManager : MonoSingleton<HandManager>
 {
     public GameObject cardPrefab;
@@ -16,7 +19,7 @@ public class HandManager : MonoSingleton<HandManager>
     public int sortingOrderIncrement = 10;
     public int AngleOffset;
     public float MoveDuration;
-    public float radius = 30.0f; // 임의로 설정한 반지름 값
+    public float radius = 30.0f;
 
     [Header("카드 1,2,3장일 떄 위치")]
     [SerializeField] private float _tValueForOneCard;
@@ -26,14 +29,17 @@ public class HandManager : MonoSingleton<HandManager>
     public List<GameObject> CardsInMyHandList = new List<GameObject>();
     private Coroutine _arrangeCardsCoroutine;
 
+    /// <summary>
+    /// 덱에서 가장 앞에 있는 카드를 1장씩 뽑는 행위를 count만큼 반복
+    /// </summary>
+    /// <param name="count"></param>
+    /// <returns></returns>
     public IEnumerator DrawCardsCoroutine(int count)
     {
-        // Don't draw cards if not in battle
         if (!BattleManager.Inst.IsOnBattle) yield break;
 
         for (int i = 0; i < count; i++)
         {
-            // Create and set up a new card
             GameObject newCard = Instantiate(cardPrefab);
             newCard.AddComponent<CardMouseDetection>();
             var newcardData = newCard.GetComponent<CardGO>();
@@ -42,22 +48,23 @@ public class HandManager : MonoSingleton<HandManager>
             newcardData.SetUpCardSprite();
             CardsInMyHandList.Add(newCard);
 
-            // Check if ArrangeCardsCoroutine is running, and stop it if necessary
             if (_arrangeCardsCoroutine != null)
             {
                 StopCoroutine(_arrangeCardsCoroutine);
                 _arrangeCardsCoroutine = null;
             }
 
-            // Start the ArrangeCardsCoroutine and store its reference
             _arrangeCardsCoroutine = StartCoroutine(ArrangeCardsCoroutine());
 
-            // Wait for a short interval before drawing the next card
             yield return new WaitForSeconds(0.2f);
         }
     }
    
-
+    /// <summary>
+    /// 특정 카드를 손패에 추가함
+    /// </summary>
+    /// <param name="cardData"></param>
+    /// <returns></returns>
     public IEnumerator AddCardToHandCoroutine(CardData cardData)
     {
         GameObject newCard = Instantiate(cardPrefab);
@@ -70,6 +77,10 @@ public class HandManager : MonoSingleton<HandManager>
         yield return StartCoroutine(ArrangeCardsCoroutine());
     }
 
+    /// <summary>
+    /// index번째에 들고 있는 카드 제거
+    /// </summary>
+    /// <param name="index"></param>
     public void DiscardCardFromHand(int index)
     {
         if (index >= 0 && index < CardsInMyHandList.Count)
@@ -88,24 +99,32 @@ public class HandManager : MonoSingleton<HandManager>
         DiscardCardFromHand(index);
     }
 
+    /// <summary>
+    /// 카드 사용 이후 묘지에 카드 추가
+    /// </summary>
+    /// <param name="cardGO"></param>
     public void DiscardCardFromHand(GameObject cardGO)
     {
-        if(CardsInMyHandList.Contains(cardGO))
-        {
-            CardsInMyHandList.Remove(cardGO);
-            Deck_GraveManager.Inst.DiscardPile.Add(cardGO.GetComponent<CardGO>().thisCardData);
-            Destroy(cardGO);
-            StartCoroutine(ArrangeCardsCoroutine());
-        }
-    }
+        Deck_GraveManager.Inst.DiscardPile.Add(cardGO.GetComponent<CardGO>().thisCardData);
+        Destroy(cardGO);
 
-    public void ExpireCardFromHand(GameObject cardGO)
-    {
         if (CardsInMyHandList.Contains(cardGO))
         {
             CardsInMyHandList.Remove(cardGO);
-            Destroy(cardGO);
-            StartCoroutine(ArrangeCardsCoroutine());
+        }
+    }
+
+    /// <summary>
+    /// 카드 사용 이후 소멸(묘지에 추가 X)
+    /// </summary>
+    /// <param name="cardGO"></param>
+    public void ExpireCardFromHand(GameObject cardGO)
+    {
+        Destroy(cardGO);
+
+        if (CardsInMyHandList.Contains(cardGO))
+        {
+            CardsInMyHandList.Remove(cardGO);
         }
     }
 
@@ -207,7 +226,10 @@ public class HandManager : MonoSingleton<HandManager>
         }
     }
 
-
+    /// <summary>
+    /// 카드를 자연스럽게 정렬하는 코루틴
+    /// </summary>
+    /// <returns></returns>
     public IEnumerator ArrangeCardsCoroutine()
     {
         int totalCards = CardsInMyHandList.Count;
@@ -221,45 +243,20 @@ public class HandManager : MonoSingleton<HandManager>
             float t = totalCards > 3 ? i / (float)(totalCards - 1) : GetProperT_Value(i);
             float angle = Mathf.Lerp(startAngle, endAngle, t);
 
-            // 원형 아치 위의 x, y 위치 계산 (z는 사용하지 않거나 다른 용도로 사용 가능)
-            Vector3 cardPosition = new Vector3(Mathf.Sin(angle), Mathf.Cos(angle) - 0.8f, 0.01f * i) * radius;
-            Vector3 targetPosition = centerPosition.position + cardPosition;
-
-            CardsInMyHandList[i].transform.DOLocalMove(targetPosition, MoveDuration);
-
-            // 카드가 아치를 따라 올바른 방향을 가리키도록 z축 회전 조정
-            float targetRotation = -(angle * Mathf.Rad2Deg);
-            CardsInMyHandList[i].transform.DORotate(new Vector3(0, 0, targetRotation), MoveDuration);
-
-            // 스프라이트 렌더러와 캔버스 정렬 순서 조정
-            SpriteRenderer[] spriteRenderers = CardsInMyHandList[i].GetComponentsInChildren<SpriteRenderer>();
-            for (int j = 0; j < spriteRenderers.Length; j++)
-            {
-                spriteRenderers[j].sortingOrder = startingSortingOrder + i * sortingOrderIncrement - j;
-            }
-            Canvas[] canvases = CardsInMyHandList[i].GetComponentsInChildren<Canvas>();
-            foreach (Canvas canvas in canvases)
-            {
-                canvas.sortingOrder = startingSortingOrder + i * sortingOrderIncrement + 1;
-            }
+            ArrangeCard(i, angle, MoveDuration);
 
             yield return null;
         }
         yield return new WaitForSeconds(MoveDuration);
     }
 
-    /// <summary>
-    /// 즉시 카드 정렬
-    /// </summary>
+    //즉시 모든 카드 정렬
     public void ArrangeCardsOnce()
     {
         int totalCards = CardsInMyHandList.Count;
-        // 아치를 형성하는 각도 범위
         float startAngle = Mathf.Deg2Rad * -AngleOffset;
         float endAngle = Mathf.Deg2Rad * AngleOffset;
 
-        // 반지름 계산이 필요하다면 여기서 추가할 수 있습니다. 예제에서는 간단화를 위해 생략.
-        // 예를 들어, 둥글게 배치할 때의 아치 반지름을 지정할 수 있습니다.
         radius = 30.0f; // 임의로 설정한 반지름 값
 
         for (int i = 0; i < totalCards; i++)
@@ -267,29 +264,34 @@ public class HandManager : MonoSingleton<HandManager>
             float t = totalCards > 3 ? i / (float)(totalCards - 1) : GetProperT_Value(i);
             float angle = Mathf.Lerp(startAngle, endAngle, t);
 
-            // 원형 아치 위의 x, y 위치 계산 (z는 사용하지 않거나 다른 용도로 사용 가능)
-            Vector3 cardPosition = new Vector3(Mathf.Sin(angle), Mathf.Cos(angle) - 0.8f, 0.01f * i) * radius;
+            ArrangeCard(i, angle, 0);
+        }
+    }
 
-            // 아치의 중심 위치에 대한 조정이 필요하다면 여기서 centerPosition을 더합니다.
-            Vector3 targetPosition = centerPosition.position + cardPosition;
-            CardsInMyHandList[i].transform.DOLocalMove(targetPosition, 0);
 
-            // 카드가 아치를 따라 올바른 방향을 가리키도록 z축 회전 조정
-            float targetRotation = -(angle * Mathf.Rad2Deg);
-            CardsInMyHandList[i].transform.DORotate(new Vector3(0, 0, targetRotation), 0);
+    private void ArrangeCard(int index, float angle, float duration)
+    {
+        // 원형 아치 위의 x, y 위치 계산 (z는 사용하지 않거나 다른 용도로 사용 가능)
+        Vector3 cardPosition = new Vector3(Mathf.Sin(angle), Mathf.Cos(angle) - 0.8f, 0.01f * index) * radius;
+        Vector3 targetPosition = centerPosition.position + cardPosition;
 
-            // 스프라이트 렌더러와 캔버스 정렬 순서 조정
-            SpriteRenderer[] spriteRenderers = CardsInMyHandList[i].GetComponentsInChildren<SpriteRenderer>();
-            for (int j = 0; j < spriteRenderers.Length; j++)
-            {
-                spriteRenderers[j].sortingOrder = startingSortingOrder + i * sortingOrderIncrement - j;
-            }
+        CardsInMyHandList[index].transform.DOLocalMove(targetPosition, duration);
 
-            Canvas[] canvases = CardsInMyHandList[i].GetComponentsInChildren<Canvas>();
-            foreach (Canvas canvas in canvases)
-            {
-                canvas.sortingOrder = startingSortingOrder + i * sortingOrderIncrement + 1;
-            }
+        // 카드가 아치를 따라 올바른 방향을 가리키도록 z축 회전 조정
+        float targetRotation = -(angle * Mathf.Rad2Deg);
+        CardsInMyHandList[index].transform.DORotate(new Vector3(0, 0, targetRotation), duration);
+
+        // 스프라이트 렌더러와 캔버스 정렬 순서 조정
+        SpriteRenderer[] spriteRenderers = CardsInMyHandList[index].GetComponentsInChildren<SpriteRenderer>();
+        for (int j = 0; j < spriteRenderers.Length; j++)
+        {
+            spriteRenderers[j].sortingOrder = startingSortingOrder + index * sortingOrderIncrement - j;
+        }
+
+        Canvas[] canvases = CardsInMyHandList[index].GetComponentsInChildren<Canvas>();
+        foreach (Canvas canvas in canvases)
+        {
+            canvas.sortingOrder = startingSortingOrder + index * sortingOrderIncrement + 1;
         }
     }
 }

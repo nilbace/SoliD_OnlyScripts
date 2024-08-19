@@ -20,7 +20,6 @@ public class YareYare : MonsterBase
     public override void SetIntent()
     {
         base.SetIntent();
-        //NowIntentNumber = Random.Range(0, 2);]
         NowIntentNumber = 0;
         if(NowIntentNumber == 0)
         {

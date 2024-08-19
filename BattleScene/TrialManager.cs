@@ -24,7 +24,6 @@ public class TrialManager : MonoBehaviour
     {
         foreach (var relic in relics)
         {
-            Debug.Log($"{relic.RelicType} Ãß°¡ {relic.TriggerType}");
             // Add the relic to the list
             _relicList.Add(relic);
             BaseUI.Inst.AddRelicIcon(relic);

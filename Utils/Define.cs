@@ -16,6 +16,7 @@ public enum E_CharNameKor
     최설하,
     황예린,
 }
+public enum EnemyDifficultyType { Normal, Elite, Boss }
 
 public enum E_CardType { Attack, Defence, Skill }
 public enum E_CardColor { Magenta, Cyan, Yellow, Black }

@@ -3,7 +3,7 @@ using System.Linq;
 
 public enum E_EffectType
 {
-    //버프 디버프 종류 위랑 똑같이 복붙하면 됨
+    //버프 디버프 종류
     Crystallization, Blessing, Vulnerability, Weakening, Bloodstain, Blade,
     BlueDragon, WhiteTiger, RedBird, BlackTortoise, Frost,
     Electrocution, Burn, Posion, HeadShot, SharpShooter, ReaperMark, DemonicWhisper, DarkMagic, SugarRush, CombatStance, Strength,
@@ -12,11 +12,13 @@ public enum E_EffectType
     LightThirst,
 
 
-    //카드 관련 특수 효과들
+    //카드 관련 효과들
     Interval, Damage, Energy, Shield, Heal, Black, DrawCard, MakeCardToHand, CheckStatusEffect, DiscardRandomCard, CheckHasDebuff, SelfHarm, HealLowestHPAlly,
     AddRandomBullet,ShootBullet, AddRandomFourGods, DrainMagic, FourGodsJudgement, CatchingBreath, Stuntman, Overcome, LastShot, UnfairTrade, LastMercy,
     AddRandomBlackCard, AllOutAttack, SoSweet, SacrificeOfBlood, Purify, BloodySword, SilverDance, Shimai, RipWound, EZ,
 }
+
+//넘겨받은 타입에 따라 버프를 반환해주는 Static한 Factory
 public class BuffFactory
 {
     public static BuffBase GetBuffByType(E_EffectType buffType, float amount)
@@ -120,6 +122,7 @@ public abstract class BuffBase
 
     public abstract void ApplyEffect(UnitBase unit);
 
+    //기본적으로 턴이 지나면 지속시간이 줄어듦
     public virtual void NextTurnStarted(UnitBase unit)
     {
         if (Duration > 1) Duration--;
