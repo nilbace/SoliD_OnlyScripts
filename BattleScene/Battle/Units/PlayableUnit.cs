@@ -10,6 +10,20 @@ public class PlayableUnit : UnitBase
 {
     protected static int s_sharedBarrier = 0;
 
+    public override IEnumerator ApplyBuffCoroutine(E_EffectType type, float amount)
+    {
+        if(type==E_EffectType.Weakening && TrialManager.Inst.HasRelic(E_RelicType.SnailHouse))
+        {
+            BaseUI.Inst.TwinkleRelicIcon(E_RelicType.SnailHouse);
+            yield break;
+        }
+        else if (type == E_EffectType.Vulnerability && TrialManager.Inst.HasRelic(E_RelicType.ScarfofLizard))
+        {
+            BaseUI.Inst.TwinkleRelicIcon(E_RelicType.ScarfofLizard);
+            yield break;
+        }
+        yield return base.ApplyBuffCoroutine(type, amount);
+    }
     public override int GetBarrier()
     {
         return s_sharedBarrier;
@@ -32,7 +46,7 @@ public class PlayableUnit : UnitBase
     
     protected virtual void Start()
     {
-        MaxHP = 20; SetUpHP();
+        MaxHP = 2000; SetNowHpToMaxHP();
         BattleManager.Inst.PlayerUnits.Add(this);
         if(BattleManager.Inst.PlayerUnits.Count==3)
         {

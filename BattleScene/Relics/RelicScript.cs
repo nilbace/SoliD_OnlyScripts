@@ -51,7 +51,6 @@ public enum E_RelicType
 public enum E_RelicTier { Mystery, Normal, Elite, Boss_Synergy, Boss_Energy }
 public enum E_RelicEffectTriggerType { OnBattleStart, OnPlayerTurnStart, OnCardUse, None , OnBattleEnd, OnGet }
 
-
 public class RelicBase
 {
     public int RelicID;

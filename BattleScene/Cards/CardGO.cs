@@ -38,4 +38,26 @@ public class CardGO : MonoBehaviour
         }
         SR_illust.sprite = Sprites_illust.FirstOrDefault(sprite => sprite.name == thisCardData.CardSpriteNameString);
     }
+
+    public void SetSortingLayerForChildren(string newLayerName)
+    {
+
+        // 모든 자식 오브젝트를 순회합니다.
+        foreach (Transform child in transform)
+        {
+            // 자식 오브젝트의 Canvas 컴포넌트를 찾습니다.
+            Canvas childCanvas = child.GetComponent<Canvas>();
+            if (childCanvas != null)
+            {
+                childCanvas.sortingLayerName = newLayerName;
+            }
+
+            // 자식 오브젝트의 SpriteRenderer 컴포넌트를 찾습니다.
+            SpriteRenderer childSpriteRenderer = child.GetComponent<SpriteRenderer>();
+            if (childSpriteRenderer != null)
+            {
+                childSpriteRenderer.sortingLayerName = newLayerName;
+            }
+        }
+    }
 }

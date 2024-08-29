@@ -8,7 +8,7 @@ public class GO_CardReward : MonoBehaviour
     public GameObject RewardPannel;
     private void OnMouseUpAsButton()
     {
-        Debug.Log($"유저 덱에 카드 {GetComponent<CardGO>().thisCardData.CardName} 추가");
+        TrialManager.Inst.AddCard(GetComponent<CardGO>().thisCardData);
         EndCardReward();
     }
 

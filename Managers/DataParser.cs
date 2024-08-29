@@ -8,7 +8,7 @@ public class DataParser : MonoBehaviour
 {
     public static DataParser Inst;
     private List<CardEffectData> CardEffectList = new List<CardEffectData>();
-    private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:O86";
+    private const string URL_CardData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=0&range=A2:P86";
     private const string URL_CardEffectData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1198669234&range=A2:D55";
     private const string URL_RelicData = "https://docs.google.com/spreadsheets/d/1-taJJ7Z8a61PP_4emH93k5ooAO3j0-tKZxo4WkM7wz8/export?format=tsv&gid=1371132894&range=A2:G43";
     public Action OnCardParseEnd { get; set; }
@@ -184,9 +184,37 @@ public class DataParser : MonoBehaviour
             }
         }
         cardData.CardSpriteNameString = lines[13].Trim();
-        cardData.DamageEffectType = lines[14].Trim();
+
+        if (string.IsNullOrWhiteSpace(lines[14]))
+        {
+            cardData.DamageEffectType = E_EffectType.None;
+        }
+        else if (!Enum.TryParse(lines[14], out cardData.DamageEffectType))
+        {
+            Debug.LogError($"{lines[14]} : Failed to parse the string to DamageEffectType.");
+        }
+
+        cardData.TooltipData = ParseStringToIntList(lines[15].Trim());
         // 처리된 카드를 덱에 추가
         GameManager.Card_RelicContainer.AddCardToAllCardList(cardData);
+    }
+
+    private List<int> ParseStringToIntList(string line)
+    {
+        List<int> result = new List<int>();
+
+        string[] numbers = line.Split(',');
+
+        foreach (string number in numbers)
+        {
+            // Trim을 사용하여 공백을 제거하고, int로 변환하여 리스트에 추가
+            if (int.TryParse(number.Trim(), out int parsedNumber))
+            {
+                result.Add(parsedNumber);
+            }
+        }
+
+        return result;
     }
 
     public CardEffectData GetCardEffectFromListByIndex(int index)

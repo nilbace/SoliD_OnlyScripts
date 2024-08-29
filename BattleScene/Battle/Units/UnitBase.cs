@@ -26,6 +26,13 @@ public abstract class UnitBase : MonoBehaviour
     public delegate Sequence OnDeadDelegate();
     public OnDeadDelegate OnDead;
 
+    private UnitEffects _unitEffects;
+
+    protected virtual void Awake()
+    {
+        _unitEffects = GetComponentInChildren<UnitEffects>();
+    }
+
     public virtual int GetBarrier()
     {
         return _barrierAmount;
@@ -54,7 +61,7 @@ public abstract class UnitBase : MonoBehaviour
         _barrierAmount = intAmount;
     }
 
-    public void SetUpHP()
+    public void SetNowHpToMaxHP()
     {
         _nowHp = MaxHP;
     }
@@ -64,16 +71,25 @@ public abstract class UnitBase : MonoBehaviour
         return _nowHp;
     }
 
+    public IEnumerator GetDamageCoroutine(float amount, E_EffectType effectType)
+    {
+        yield return new WaitForEndOfFrame();
+        ProcessDamage(amount, effectType);
+    }
 
     public IEnumerator GetDamageCoroutine(float amount)
     {
-        yield return new WaitForEndOfFrame(); // Ensure coroutine begins at the next frame
+        yield return new WaitForEndOfFrame();
+        ProcessDamage(amount, CardEffectManager.NowCardData.DamageEffectType);
+    }
 
+    protected virtual void ProcessDamage(float amount, E_EffectType effectType)
+    {
         // Calculate damage considering vulnerability
         int resultAmount = (int)(HasBuff(E_EffectType.Vulnerability) ? amount * 1.5f : amount);
         int effectiveBarrier = GetBarrier();
 
-        // Process damage against barrier
+        //베리어 체크
         if (effectiveBarrier > 0)
         {
             effectiveBarrier -= resultAmount;
@@ -93,13 +109,13 @@ public abstract class UnitBase : MonoBehaviour
         UpdateBarrier(effectiveBarrier);
 
         // Trigger visual effect for damage
-        VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Damage, this);
+        VisualEffectManager.Inst.InstantiateEffect(effectType, this);
         Debug.Log($"{gameObject.name} took {resultAmount} damage. Barrier: {effectiveBarrier}, HP: {_nowHp}");
 
         // Check if the character is dead
         if (_nowHp <= 0)
         {
-            yield return StartCoroutine(DeadCoroutine());
+            StartCoroutine(DeadCoroutine());
         }
     }
 
@@ -127,8 +143,18 @@ public abstract class UnitBase : MonoBehaviour
         }
     }
 
+    public void TwinkleBuffIcon(E_EffectType type)
+    {
+        if(HasBuff(type, out BuffBase buffObject))
+        {
+            var buffindex = BuffList.IndexOf(buffObject);
+            _unitEffects.TwinkleIcion(buffindex);
+        }
+    }
+
     public virtual IEnumerator ApplyBuffCoroutine(E_EffectType type, float amount)
     {
+        if (!isAlive()) yield break;
         Debug.Log($"{gameObject.name} 에게 {type}을 {amount} 만큼 부여");
         ApplyBuff(BuffFactory.GetBuffByType(type, amount));
         VisualEffectManager.Inst.InstantiateEffect(type, this);
@@ -268,4 +294,6 @@ public abstract class UnitBase : MonoBehaviour
             Debug.Log($"Effect Type: {effect.BuffType}, Duration: {effect.Duration}, Stack: {effect.Stack}, InfoText: {effect.InfoText}");
         }
     }
+
+
 }

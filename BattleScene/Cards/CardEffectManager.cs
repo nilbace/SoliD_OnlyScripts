@@ -1,9 +1,7 @@
-using DG.Tweening;
+using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using System;
 
 /// <summary>
 /// 카드 사용시 어떤 식으로 효과가 전개될 것인지 담당하는 스크립트
@@ -16,6 +14,8 @@ public class CardEffectManager : MonoBehaviour
 
     public static CardData NowCardData;
     public static GameObject NowCardGO;
+
+    private float resultDamage;
     private void Awake()
     {
         Inst = this;
@@ -57,10 +57,12 @@ public class CardEffectManager : MonoBehaviour
                 case E_EffectType.Damage:
                     foreach (UnitBase target in targets)
                     {
-                        var damageAmount = cardEffectData.Amount;
-                        damageAmount += AdditionalAttack();
+                        resultDamage = cardEffectData.Amount;
+                        yield return StartCoroutine(CheckAdditionalAttackRelicCor());
+                        yield return StartCoroutine(CheckAdditionalAttackBuffCor());
+
                         if(target.isAlive())
-                            yield return StartCoroutine(target.GetDamageCoroutine(damageAmount));
+                            yield return StartCoroutine(target.GetDamageCoroutine(resultDamage));
                     }
                     break;
 
@@ -80,19 +82,7 @@ public class CardEffectManager : MonoBehaviour
                     }
                     break;
 
-                    //검정색을 추가함
-                case E_EffectType.Black:
-                    foreach (UnitBase target in targets)
-                    {
-                        if (target.isAlive())
-                        {
-                            var mon = target as MonsterBase;
-                            mon.AddInk(E_CardColor.Black);
-                            yield return null;
-                        }
-                    }
-                    break;
-
+            
                     //에너지 회복
                 case E_EffectType.Energy:
                     BattleManager.Inst.AddEnergy(cardEffectData.Amount);
@@ -168,9 +158,9 @@ public class CardEffectManager : MonoBehaviour
                     //3번 카드
                 case E_EffectType.DrainMagic:
                     {
-                        if (BattleManager.Inst.TargetMonster.isAlive() && BattleManager.Inst.TargetMonster.HasBuff(E_EffectType.Bloodstain, out BuffBase tempbuff))
+                        if (BattleManager.Inst.TargetMonster.isAlive() && BattleManager.Inst.TargetMonster.HasBuff(E_EffectType.Bleeding, out BuffBase tempbuff))
                         {
-                            BattleManager.Inst.TargetMonster.RemoveBuff(E_EffectType.Bloodstain);
+                            BattleManager.Inst.TargetMonster.RemoveBuff(E_EffectType.Bleeding);
                             yield return StartCoroutine(BattleManager.Inst.GetPlayer(NowCardData.CardOwner).HealCoroutine(tempbuff.Duration));
                         }
                     }
@@ -356,9 +346,9 @@ public class CardEffectManager : MonoBehaviour
                     //82번 카드
                 case E_EffectType.RipWound:
                     {
-                        if (BattleManager.Inst.TargetMonster.HasBuff(E_EffectType.Bloodstain, out BuffBase tempbuff))
+                        if (BattleManager.Inst.TargetMonster.HasBuff(E_EffectType.Bleeding, out BuffBase tempbuff))
                         {
-                            yield return BattleManager.Inst.TargetMonster.ApplyBuffCoroutine(E_EffectType.Bloodstain, tempbuff.Duration);
+                            yield return BattleManager.Inst.TargetMonster.ApplyBuffCoroutine(E_EffectType.Bleeding, tempbuff.Duration);
                         }
                     }
                     break;
@@ -366,9 +356,9 @@ public class CardEffectManager : MonoBehaviour
                     //85번 카드
                 case E_EffectType.SilverDance:
                     {
-                        if (BattleManager.Inst.TargetMonster.HasBuff(E_EffectType.Bloodstain, out BuffBase tempbuff))
+                        if (BattleManager.Inst.TargetMonster.HasBuff(E_EffectType.Bleeding, out BuffBase tempbuff))
                         {
-                            BattleManager.Inst.TargetMonster.RemoveBuff(E_EffectType.Bloodstain);
+                            BattleManager.Inst.TargetMonster.RemoveBuff(E_EffectType.Bleeding);
                             yield return StartCoroutine(BattleManager.Inst.GetPlayer(NowCardData.CardOwner).AddBarrierCoroutine(tempbuff.Duration));
                         }
                     }
@@ -391,6 +381,20 @@ public class CardEffectManager : MonoBehaviour
                     foreach (UnitBase target in targets)
                     {
                         if (target == null) continue;
+                        #region 특수 처리
+                        //배신자의 혀라면 1.5배로
+                        if(TrialManager.Inst.HasRelic(E_RelicType.TraitorsTongue))
+                        {
+                            if (NowCardData.CardOwner == E_CharName.Yerin && (cardEffectData.CardEffectType == E_EffectType.Weakening || cardEffectData.CardEffectType == E_EffectType.Vulnerability)  )
+                            {
+                                yield return target.ApplyBuffCoroutine(cardEffectData.CardEffectType, cardEffectData.Amount*1.5f);
+                                continue;
+                            }
+                        }
+
+                        #endregion
+
+
                         yield return target.ApplyBuffCoroutine(cardEffectData.CardEffectType, cardEffectData.Amount);
                     }
                     break;
@@ -403,15 +407,14 @@ public class CardEffectManager : MonoBehaviour
         {
             if (NowCardData.NeedTarget)
             {
-                (BattleManager.Inst.TargetMonster as MonsterBase).AddInk(NowCardData.CardColor);
+                yield return StartCoroutine((BattleManager.Inst.TargetMonster as MonsterBase).AddInk(NowCardData.CardColor));
             }
             else
             {
                 var enemies = BattleManager.Inst.GetProperUnits(NowCardData.CardOwner, E_TargetType.AllEnemies);
                 foreach (UnitBase enemy in enemies)
                 {
-                    (enemy as MonsterBase).AddInk(NowCardData.CardColor);
-                    yield return null;
+                    yield return StartCoroutine((enemy as MonsterBase).AddInk(NowCardData.CardColor));
                 }
             }
         }
@@ -439,24 +442,103 @@ public class CardEffectManager : MonoBehaviour
     }
 
     //추가 데미지가 있는지 확인하여 더함
-    private float AdditionalAttack()
+    //관련 버프 아이콘 활성화
+    private IEnumerator CheckAdditionalAttackRelicCor()
     {
-        float damage = 0;
-        if (NowCardData.CardOwner == E_CharName.Seolha && NowCardData.CardCost == 0)
+        var nowCardUser = GetPlayer(NowCardData.CardOwner);
+
+        foreach (RelicBase relic in TrialManager.Inst.RelicList)
         {
-            var seolhaUnit = BattleManager.Inst.GetPlayer(E_CharName.Seolha);
+            var relicIndex = TrialManager.Inst.RelicList.IndexOf(relic);
 
-            // Blade 효과를 찾고 널 체크
-            var bladeEffect = seolhaUnit.BuffList.FirstOrDefault(effect => effect.BuffType == E_EffectType.Blade);
-
-            // Blade 효과가 존재하는 경우에만 스택 값을 가져옴
-            if (bladeEffect != null)
+            switch (relic.RelicType)
             {
-                damage = bladeEffect.Stack;
+
+                case E_RelicType.BlessingofFourGods:
+                    {
+                        if (NowCardData.CardOwner == E_CharName.Minju && NowCardData.WeaponType == E_WeaponType.Talisman)
+                        {
+                            resultDamage *= 1.3f;
+                            BaseUI.Inst.TwinkleRelicIcon(relicIndex);
+                            yield return new WaitForSeconds(0.2f);
+                        }
+                    }
+                    break;
+            }
+            
+        }
+    }
+    private IEnumerator CheckAdditionalAttackBuffCor()
+    {
+        var nowCardUser = GetPlayer(NowCardData.CardOwner);
+
+        foreach(BuffBase buff in nowCardUser.BuffList)
+        {
+            if(buff.isDealerBuff)
+            {
+                switch (buff.BuffType)
+                {
+                    //약화 디버프
+                    case E_EffectType.Weakening:
+                        resultDamage = resultDamage * 3 / 4;
+                        nowCardUser.TwinkleBuffIcon(E_EffectType.Weakening);
+                        yield return new WaitForSeconds(0.2f);
+                        break;
+
+                    //설하의 날붙이
+                    case E_EffectType.Blade:
+                        if (NowCardData.CardOwner == E_CharName.Seolha && NowCardData.CardCost == 0)
+                        {
+                            // Blade 효과를 찾고
+                            var bladeEffect = nowCardUser.BuffList.FirstOrDefault(effect => effect.BuffType == E_EffectType.Blade);
+
+                            resultDamage += bladeEffect.Stack;
+                            nowCardUser.TwinkleBuffIcon(E_EffectType.Blade);
+                            yield return new WaitForSeconds(0.2f);
+                        }
+                        break;
+                   
+      
+                    case E_EffectType.SharpShooter:
+                        if (NowCardData.CardOwner == E_CharName.Seolha && NowCardData.WeaponType == E_WeaponType.ShotGun)
+                        {
+                            resultDamage = resultDamage * 1.5f;
+                            nowCardUser.TwinkleBuffIcon(E_EffectType.SharpShooter);
+                            yield return new WaitForSeconds(0.2f);
+                        }
+                        break;
+                  
+                    case E_EffectType.DarkMagic:
+                        if (NowCardData.CardColor == E_CardColor.Black)
+                        {
+                            var darkMagicStack = nowCardUser.BuffList.FirstOrDefault(effect => effect.BuffType == E_EffectType.DarkMagic);
+
+                            resultDamage *= (1 +(darkMagicStack.Stack * 0.3f));
+                            nowCardUser.TwinkleBuffIcon(E_EffectType.DarkMagic);
+                            yield return new WaitForSeconds(0.2f);
+                        }
+                        break;
+                    case E_EffectType.Strength:
+                        resultDamage = resultDamage * 1.3f;
+                        nowCardUser.TwinkleBuffIcon(E_EffectType.Strength);
+                        yield return new WaitForSeconds(0.2f);
+                        break;
+
+                    default:
+                        continue;
+                }
             }
         }
+    }
 
+  
+    private UnitBase GetPlayer(E_CardColor color)
+    {
+        return BattleManager.Inst.GetPlayer(color);
+    }
 
-        return damage;
+    private UnitBase GetPlayer(E_CharName owner)
+    {
+        return BattleManager.Inst.GetPlayer(owner);
     }
 }

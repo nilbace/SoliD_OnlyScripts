@@ -19,8 +19,8 @@ public class Seeker_of_the_Rainbow : MonsterBase
     public override IEnumerator ApplyBuffCoroutine(E_EffectType type, float amount)
     {
         // Group similar effect types and handle them accordingly
-        if (type == E_EffectType.Frost ||
-            type == E_EffectType.Electrocution ||
+        if (type == E_EffectType.Freeze ||
+            type == E_EffectType.Lightning ||
             type == E_EffectType.Burn ||
             type == E_EffectType.Posion)
         {
@@ -56,14 +56,14 @@ public class Seeker_of_the_Rainbow : MonsterBase
     {
         SR_Monster.sprite = AttackSprite;
 
-        Vector3 startPos = SR_Monster.transform.position;
+        Vector3 startPos = transform.position;
         Vector3 targetPos = new Vector3(startPos.x - 2, startPos.y, startPos.z);
 
         yield return MoveOverTime(transform, targetPos, moveTimeOut);
         yield return new WaitForSeconds(0.2f);
         SR_Monster.sprite = StandSprite;
         StartCoroutine(MoveOverTime(transform, startPos, moveTimeIn));
-        yield return StartCoroutine(Attack(15));
+        yield return StartCoroutine(AttackCoroutine(15));
         yield return new WaitForSeconds(moveTimeIn);
     }
 

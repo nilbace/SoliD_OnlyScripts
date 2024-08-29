@@ -4,7 +4,9 @@ using UnityEngine;
 using DG.Tweening;
 using UnityEngine.UI;
 
-public enum E_RewardType { Normal, Elite, Boss}
+/// <summary>
+/// 전투 이후 보상 팝업창을 관리하는 스크립트
+/// </summary>
 public class RewardManager
 {
     public GameObject RewardPannel;
@@ -40,7 +42,7 @@ public class RewardManager
     /// 적의 난이도에 따라 보상 생성
     /// </summary>
     /// <param name="rewardType"></param>
-    public void GenerateReward(E_RewardType rewardType)
+    public void GenerateReward(E_EnemyDifficultyType rewardType)
     {
         string rewardName = rewardType.ToString();
 
@@ -73,36 +75,5 @@ public class RewardManager
         Map.MapView.Inst.ShowMap();
     }
  
-    public void AddMoonStone()
-    {
-        AddMoonStoneOverTime(1f);
-    }
-
-    private void AddMoonStoneOverTime(float duration)
-    {
-        int initialGold = GameManager.UserData.MoonStoneAmount;
-        int targetGold = initialGold + GoldReward.GoldRewardAmount;
-
-        // Variable to store the last frame's gold value
-        int lastGold = initialGold;
-
-        // DOTween to animate gold increase over time
-        DOTween.To(() => initialGold,
-                   x => {
-                       int deltaGold = x - lastGold;
-                       GameManager.UserData.AddMoonStone(deltaGold); // Update gold incrementally
-                   lastGold = x;
-                   },
-                   targetGold,
-                   duration)
-            .OnComplete(() =>
-            {
-            // Ensure the final value is set correctly if necessary
-            int finalGoldAmount = targetGold - GameManager.UserData.MoonStoneAmount;
-                if (finalGoldAmount > 0)
-                {
-                    GameManager.UserData.AddMoonStone(finalGoldAmount);
-                }
-            });
-    }
+    
 }

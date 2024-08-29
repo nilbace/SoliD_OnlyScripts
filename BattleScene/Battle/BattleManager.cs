@@ -16,11 +16,13 @@ public class BattleManager : MonoSingleton<BattleManager>
     public List<UnitBase> PlayerUnits;
     public List<MonsterBase> MonsterUnits;
     public int MonsterCount;
-    public Action OnBattleStart;
-    public Action OnPlayerTurnStart;
+    public Action OnBattleStart { get; set; }
+    public Action OnBattleEnd { get; set; }
+    public Action OnPlayerTurnStart { get; set; }
     public bool IsOnBattle;
     public int TurnCount;
-    public EnemyDifficultyType EnemyDifficultyType;
+    public bool _canEndTurn;
+    public E_EnemyDifficultyType EnemyDifficultyType;
 
     //캐릭터 이동 관련
     [Tooltip("캐릭터 사이의 거리")]
@@ -28,12 +30,13 @@ public class BattleManager : MonoSingleton<BattleManager>
     public float FrontCharSize;
     public float BackCharSize;
     public float PlayerMoveDuration;
+    public Transform[] PlayerPozs;
 
     //플레이어가 조준한 몬스터
     public UnitBase TargetMonster;
     
     //에너지 관련
-    [HideInInspector]public int EnergyAmount;
+    [HideInInspector]public int EnergyAmount { get; set; }
     [HideInInspector] public int NowEnergy;
     public TMPro.TMP_Text TMP_Energy;
 
@@ -82,13 +85,14 @@ public class BattleManager : MonoSingleton<BattleManager>
         TargetMonster = null;
         MonsterUnits = new List<MonsterBase>();
         TurnCount = 0;
+        NowEnergy = 0;
         IsOnBattle = true;
 
         // 데이터 초기화 및 적 설정
         ResetDatas();
 
         //Todo 각 전투마다 적절한 규칙에 따라 적 설정하도록 변경 
-        SpawnEnemy(MonsterContainer.Inst.GetMonsterByType(E_MinorEnemyType.Yare), new Vector3(5f, 0f, 0f));
+        SpawnEnemy(MonsterContainer.Inst.GetMonsterByType(), new Vector3(2.5f, -0.3f, 0f));
 
         // 전투 시작 이벤트 트리거
         OnBattleStart?.Invoke();
@@ -125,17 +129,35 @@ public class BattleManager : MonoSingleton<BattleManager>
         yield return StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnPlayerTurnStart));
 
         ShowMonsterIntents();
+        _canEndTurn = true;
         OnPlayerTurnStart?.Invoke();
     }
 
     private IEnumerator DrawCards()
     {
         yield return StartCoroutine(HandManager.Inst.DrawCardsCoroutine(5));
+
+        if(GetPlayer(E_CharName.Seolha).HasBuff(E_EffectType.CombatStance, out BuffBase buff))
+        {
+            for(int i = 0;i<buff.Stack; i++)
+                yield return StartCoroutine(HandManager.Inst.AddCardToHandCoroutine(GameManager.Card_RelicContainer.GetCardDataByIndex(87)));
+        }
+        
+        if (TurnCount == 1 && TrialManager.Inst.HasRelic(E_RelicType.BlueScabbard))
+        {
+            BaseUI.Inst.TwinkleRelicIcon(E_RelicType.BlueScabbard);
+            yield return StartCoroutine(HandManager.Inst.AddCardToHandCoroutine(GameManager.Card_RelicContainer.GetCardDataByIndex(87)));
+            yield return StartCoroutine(HandManager.Inst.AddCardToHandCoroutine(GameManager.Card_RelicContainer.GetCardDataByIndex(87)));
+        }
     }
 
     public void EndPlayerTurn()
     {
-        if (!IsOnBattle) return;
+        //전투 중이 아니거나 누를 수 없는 상황이라면 탈출
+        if (!_canEndTurn || !IsOnBattle) return;
+
+        _canEndTurn = false;
+
         HandManager.Inst.DiscardAllCardsFromHand();
         ReduceEffectDuration(isPlayer: true);
         StartMonsterTurn();
@@ -205,6 +227,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     [ContextMenu("클리어")]
     private void ClearBattle()
     {
+        OnBattleEnd?.Invoke();
         StartCoroutine(TrialManager.Inst.ActiveRelic(E_RelicEffectTriggerType.OnBattleEnd));
         DOVirtual.DelayedCall(1f, () =>
         {
@@ -215,7 +238,7 @@ public class BattleManager : MonoSingleton<BattleManager>
             IsOnBattle = false;
             ClearPlayerStatusEffects();
             HandManager.Inst.DiscardAllCardsFromHand();
-            GameManager.Reward.GenerateReward(E_RewardType.Normal);
+            GameManager.Reward.GenerateReward(E_EnemyDifficultyType.Normal);
         });
     }
 
@@ -231,7 +254,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     #region MonsterBase 호출용 함수 목록
     public IEnumerator MonsterAttackPlayer(float amount)
     {
-        return PlayerUnits[0].GetDamageCoroutine(amount);
+        return PlayerUnits[0].GetDamageCoroutine(amount, E_EffectType.Bleeding);
     }
 
     public IEnumerator MonsterApplyEffect_To_Player(E_EffectType buff, float amount)
@@ -270,6 +293,27 @@ public class BattleManager : MonoSingleton<BattleManager>
     public UnitBase GetPlayer(E_CharName name)
     {
         return PlayerUnits.FirstOrDefault(unit => unit.tag == name.ToString());
+    }
+
+    public UnitBase GetPlayer(E_CardColor color)
+    {
+        UnitBase player = null;
+        switch (color)
+        {
+            case E_CardColor.Magenta:
+                player = GetPlayer(E_CharName.Minju);
+                break;
+            case E_CardColor.Cyan:
+                player = GetPlayer(E_CharName.Seolha);
+                break;
+            case E_CardColor.Yellow:
+                player = GetPlayer(E_CharName.Yerin);
+                break;
+            case E_CardColor.Black:
+                player = GetPlayer(E_CharName.Minju);
+                break;
+        }
+        return player;
     }
     public UnitBase GetLowestHealthPlayer()
     {
@@ -338,6 +382,8 @@ public class BattleManager : MonoSingleton<BattleManager>
                 tempUnits.AddRange(PlayerUnits);
                 break;
         }
+
+        if (tempUnits.Count == 0) return null;
         return tempUnits;
     }
 
@@ -375,7 +421,7 @@ public class BattleManager : MonoSingleton<BattleManager>
             // DOTween 시퀀스를 사용하여 애니메이션 순서를 관리합니다.
             
 
-            moveSequence.Append(targetChar.transform.DOLocalMoveX(0, PlayerMoveDuration));
+            moveSequence.Append(targetChar.transform.DOMove(PlayerPozs[0].position, PlayerMoveDuration));
             moveSequence.Join(targetChar.transform.DOScale(FrontCharSize, PlayerMoveDuration));
 
             int pozIndex = 1;
@@ -383,7 +429,7 @@ public class BattleManager : MonoSingleton<BattleManager>
             {
                 if (i != targetIndex)
                 {
-                    moveSequence.Join(PlayerUnits[i].transform.DOLocalMoveX(-PlayerCharOffset*pozIndex, PlayerMoveDuration));
+                    moveSequence.Join(PlayerUnits[i].transform.DOMove(PlayerPozs[pozIndex].position, PlayerMoveDuration));
                     moveSequence.Join(PlayerUnits[i].transform.DOScale(BackCharSize, PlayerMoveDuration));
                     pozIndex++;
                 }
@@ -408,34 +454,30 @@ public class BattleManager : MonoSingleton<BattleManager>
     {
         // 살아있는 캐릭터를 앞으로, 죽은 캐릭터를 뒤로 이동시키기 위해 리스트를 정렬합니다.
         PlayerUnits.Sort((a, b) => a.isAlive() == b.isAlive() ? 0 : a.isAlive() ? -1 : 1);
-        Debug.Log("재정렬 완료");
-        Debug.Log($"현재 가장 앞 {PlayerUnits[0].gameObject.tag}");
-        foreach (UnitBase player in PlayerUnits)
-        {
-            Debug.Log(player.gameObject.tag + player.GetHP().ToString());
-        }
 
         // 정렬된 리스트를 바탕으로 위치와 크기를 애니메이션합니다.
         for (int i = 0; i < PlayerUnits.Count; i++)
         {
             var unit = PlayerUnits[i];
-            float targetX = -PlayerCharOffset * i;
+
+            // 캐릭터의 목표 위치와 크기를 설정합니다.
+            Transform targetTransform = PlayerPozs[i];
+            Vector3 targetPosition = targetTransform.position;
             Vector3 targetScale = Vector3.one * (unit.isAlive() ? (i == 0 ? FrontCharSize : BackCharSize) : BackCharSize);
 
-            // Start a coroutine to animate position and scale
-            StartCoroutine(AnimatePositionAndScale(unit, targetX, targetScale, PlayerMoveDuration));
+            // 위치와 크기를 애니메이션하기 위한 코루틴 시작
+            StartCoroutine(AnimatePositionAndScale(unit, targetPosition, targetScale, PlayerMoveDuration));
         }
 
         // 모든 애니메이션이 완료될 때까지 대기
         yield return new WaitForSeconds(PlayerMoveDuration);
     }
 
-    private IEnumerator AnimatePositionAndScale(UnitBase unit, float targetX, Vector3 targetScale, float duration)
+    private IEnumerator AnimatePositionAndScale(UnitBase unit, Vector3 targetPosition, Vector3 targetScale, float duration)
     {
         float elapsedTime = 0f;
-        Vector3 startingPosition = unit.transform.localPosition;
+        Vector3 startingPosition = unit.transform.position;
         Vector3 startingScale = unit.transform.localScale;
-        Vector3 targetPosition = new Vector3(targetX, startingPosition.y, startingPosition.z);
 
         while (elapsedTime < duration)
         {
@@ -443,16 +485,17 @@ public class BattleManager : MonoSingleton<BattleManager>
             float t = elapsedTime / duration;
 
             // Lerp position and scale
-            unit.transform.localPosition = Vector3.Lerp(startingPosition, targetPosition, t);
+            unit.transform.position = Vector3.Lerp(startingPosition, targetPosition, t);
             unit.transform.localScale = Vector3.Lerp(startingScale, targetScale, t);
 
             yield return null;
         }
 
         // Ensure final position and scale
-        unit.transform.localPosition = targetPosition;
+        unit.transform.position = targetPosition;
         unit.transform.localScale = targetScale;
     }
+
 
 
     #endregion
@@ -460,7 +503,24 @@ public class BattleManager : MonoSingleton<BattleManager>
     #region Energy
     public void FillEnergy()
     {
-        NowEnergy = EnergyAmount;
+        if (TrialManager.Inst.HasRelic(E_RelicType.BlessingofTopaz))
+        {
+            BaseUI.Inst.TwinkleRelicIcon(E_RelicType.BlessingofTopaz);
+        }
+        else
+        {
+            NowEnergy = 0;
+        }
+
+        int additionEnergy = 0;
+        if (TrialManager.Inst.HasRelic(E_RelicType.HeartofEternity)) additionEnergy++;
+        if (TrialManager.Inst.HasRelic(E_RelicType.BlackFeather)) additionEnergy++;
+        if (TrialManager.Inst.HasRelic(E_RelicType.BeautysTear)) additionEnergy++;
+        if (TrialManager.Inst.HasRelic(E_RelicType.EnergyDrink) &&
+            (EnemyDifficultyType == E_EnemyDifficultyType.Elite || EnemyDifficultyType == E_EnemyDifficultyType.Boss))
+            additionEnergy++;
+
+        NowEnergy += EnergyAmount + additionEnergy;
         UpdateBattleUI();
     }
 

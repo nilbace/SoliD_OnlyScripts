@@ -8,9 +8,11 @@ using DG.Tweening;
 public class InkSkillManager : MonoBehaviour
 {
     public static InkSkillManager Inst;
-    private Action _magentaInkSkillAction;
-    private Action _cyanInkSkillAction;
-    private Action _yellowInkSkillAction;
+
+    private Func<IEnumerator> _magentaInkSkillAction;
+    private Func<IEnumerator> _cyanInkSkillAction;
+    private Func<IEnumerator> _yellowInkSkillAction;
+
     private void Awake()
     {
         Inst = this;
@@ -23,71 +25,133 @@ public class InkSkillManager : MonoBehaviour
 
     private void SetupInkSkills()
     {
-        _magentaInkSkillAction = Encroachment_1_AllEnemies;
-        _cyanInkSkillAction = MultiSlash;
-        _yellowInkSkillAction = HealAll;
+        _magentaInkSkillAction = GainDarkMagic;
+        _cyanInkSkillAction = MultiSlashCoroutine;
+        _yellowInkSkillAction = HealAllCoroutine;
     }
-    public void UseInkSkill(E_CardColor color)
+
+    public IEnumerator UseInkSkill(E_CardColor color)
     {
         switch (color)
         {
             case E_CardColor.Magenta:
-                _magentaInkSkillAction?.Invoke();
+                if (_magentaInkSkillAction != null)
+                    yield return StartCoroutine(_magentaInkSkillAction());
                 break;
             case E_CardColor.Cyan:
-                _cyanInkSkillAction?.Invoke();
+                if (_cyanInkSkillAction != null)
+                    yield return StartCoroutine(_cyanInkSkillAction());
                 break;
             case E_CardColor.Yellow:
-                _yellowInkSkillAction?.Invoke();
+                if (_yellowInkSkillAction != null)
+                    yield return StartCoroutine(_yellowInkSkillAction());
                 break;
         }
     }
 
-    #region Magenta
-    private void Encroachment_1_AllEnemies()
+    #region Minju
+    private IEnumerator GainDarkMagic()
     {
-        var enemies = BattleManager.Inst.MonsterUnits;
-        foreach(MonsterBase enemy in enemies)
-        {
-            //enemy.ApplyStatusEffect(E_EffectType.Encroachment, 1);
-        }
+        Debug.Log("흑마버1");
+        var minju = BattleManager.Inst.GetPlayer(E_CharName.Minju);
+        yield return StartCoroutine(minju.ApplyBuffCoroutine(E_EffectType.DarkMagic, 1));
     }
+
+    private IEnumerator RemoveDarkMagic()
+    {
+        var minju = BattleManager.Inst.GetPlayer(E_CharName.Minju);
+        yield return StartCoroutine(minju.ApplyBuffCoroutine(E_EffectType.DarkMagic, -1));
+    }
+
+    private IEnumerator Heal3()
+    {
+        var minju = BattleManager.Inst.GetPlayer(E_CharName.Minju);
+        yield return StartCoroutine(minju.HealCoroutine(3));
+    }
+
+    private IEnumerator MaxHP1()
+    {
+        var minju = BattleManager.Inst.GetPlayer(E_CharName.Minju);
+        minju.MaxHP += 1;
+        yield return null;
+    }
+
+    private IEnumerator Bleed1()
+    {
+        var enemy = BattleManager.Inst.TargetMonster;
+        yield return enemy.ApplyBuffCoroutine(E_EffectType.Bleeding, 1);
+    }
+
+    private IEnumerator AttackByBlackCard()
+    {
+        var enemy = BattleManager.Inst.TargetMonster;
+        int amount = 0;
+
+        foreach(var card in HandManager.Inst.CardsInMyHandList)
+        {
+            if (card.GetComponent<CardGO>().thisCardData.CardColor == E_CardColor.Black) amount++;
+        }
+        if (amount == 0) yield break;
+        yield return BattleManager.Inst.TargetMonster.GetDamageCoroutine(amount);
+    }
+
+
+    private IEnumerator AttackByTalisman()
+    {
+        var enemy = BattleManager.Inst.TargetMonster;
+        int amount = 0;
+
+        foreach (var card in HandManager.Inst.CardsInMyHandList)
+        {
+            if (card.GetComponent<CardGO>().thisCardData.WeaponType == E_WeaponType.Talisman) amount++;
+        }
+        if (amount == 0) yield break;
+        yield return BattleManager.Inst.TargetMonster.GetDamageCoroutine(amount);
+    }
+
+
     #endregion
 
     #region Cyan
-    private void MultiSlash()
+    private IEnumerator MultiSlashCoroutine()
     {
         var seolhaUnit = BattleManager.Inst.GetPlayer(E_CharName.Seolha);
 
-        //날붙이 스택이 없다면 탈출
+        // 날붙이 스택이 없다면 탈출
         if (!seolhaUnit.HasBuff(E_EffectType.Blade, out BuffBase blade))
         {
-            return;
+            yield break;
         }
 
         var seq = DOTween.Sequence();
-        //날붙이 스택만큼 3회 공격
+        // 날붙이 스택만큼 3회 공격
         for (int i = 0; i < 3; i++)
         {
             var enemylist = BattleManager.Inst.GetProperUnits(E_CharName.Seolha, E_TargetType.AnyEnemy);
-            if (enemylist.Count == 0) return;
+            if (enemylist.Count == 0) yield break;
 
             seq.AppendCallback(() =>
             {
                 enemylist[0].GetDamageCoroutine(blade.Stack);
             }).AppendInterval(0.3f);
-        }
-    }
 
+            // 각 공격 사이에 코루틴 대기 시간 추가
+            yield return new WaitForSeconds(0.3f);
+        }
+
+        // DOTween 시퀀스가 완료될 때까지 기다립니다.
+        yield return seq.WaitForCompletion();
+    }
     #endregion
 
     #region Yellow
-    private void HealAll()
+    private IEnumerator HealAllCoroutine()
     {
         var Allies = BattleManager.Inst.PlayerUnits;
-        foreach(UnitBase ally in Allies)
+        foreach (UnitBase ally in Allies)
         {
             ally.HealCoroutine(10);
+            yield return null; // 각 아군을 치유한 후 다음 프레임까지 대기
         }
     }
     #endregion

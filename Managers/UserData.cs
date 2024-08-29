@@ -35,24 +35,11 @@ public class UserData
 
     #region Currency
 
-    private int _moonStoneAmount;
-    public int MoonStoneAmount { get { return _moonStoneAmount; } }
     private int _memoryFragmentAmount;
     public int MemoryFragmentAmount { get { return _memoryFragmentAmount; } }
     private int _coreFragmentAmount;
     public int CoreFragmentAmount { get { return _coreFragmentAmount; } }
 
-    public void AddMoonStone(int amount)
-    {
-        _moonStoneAmount += amount;
-        BaseUI.Inst.UpdateUIs();
-    }
-
-    public void UseMoonStone(int amount)
-    {
-        _moonStoneAmount -= amount;
-        BaseUI.Inst.UpdateUIs();
-    }
 
     public void AddMemoryFragment(int amount)
     {

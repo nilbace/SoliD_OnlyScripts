@@ -1,28 +1,47 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
 {
     public List<CardData> DrawPile = new List<CardData>();
     public List<CardData> DiscardPile = new List<CardData>();
+    public Button DrawPileBTN;
+    public Button DiscardPileBTN;
+    public TMPro.TMP_Text TMP_DrawPileCount;
+    public TMPro.TMP_Text TMP_DiscardPileCount;
 
     private void Start()
     {
         DataParser.Inst.OnCardParseEnd += MakeBaseDeck;
         BattleManager.Inst.OnBattleStart += SetUpPiles;
     }
+
+    private void Update()
+    {
+        TMP_DrawPileCount.text = DrawPile.Count.ToString();
+        TMP_DiscardPileCount.text = DiscardPile.Count.ToString();
+    }
+
+    public void ShowDrawPile()
+    {
+        UI_CardOverView.Inst.ShowOverview(E_CardOverviewType.DrawPile);
+    }
+    public void ShowDiscardPile()
+    {
+        UI_CardOverView.Inst.ShowOverview(E_CardOverviewType.DiscardPile);
+    }
     public void MakeBaseDeck()
     {
         Debug.Log("덱 생성 완료");
-        TrialManager.Inst.UserDeck.AddRange(GameManager.Card_RelicContainer.GetBaseDeck());
-        TrialManager.Inst.AddRelics(GameManager.Card_RelicContainer.GetRandomRelics(10));
+        TrialManager.Inst.AddCard(GameManager.Card_RelicContainer.GetBaseDeck());
     }
 
     public void SetUpPiles()
     {
         DrawPile = new List<CardData>(TrialManager.Inst.UserDeck);
-        //Shuffle(DrawPile); // 드로우 파일의 모든 카드 섞기
+        Shuffle(DrawPile); // 드로우 파일의 모든 카드 섞기
         DiscardPile = new List<CardData>();
     }
 
@@ -68,20 +87,4 @@ public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
             cards[k] = value;
         }
     }
-
-    public void ShowDrawPile()
-    {
-        foreach(CardData data in DrawPile)
-        {
-            Debug.Log(data.CardName);
-        }
-    }
-
-    public void ShowDiscardPile()
-    {
-        foreach (CardData data in DiscardPile)
-        {
-            Debug.Log(data.CardName);
-        }
-    }
-}
+ }

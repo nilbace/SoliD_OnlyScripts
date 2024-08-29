@@ -26,10 +26,11 @@ public class VisualEffectManager : MonoBehaviour
 
     public void InstantiateEffect(E_EffectType effectType, UnitBase Unit)
     {
+        if (effectType == E_EffectType.None) return;
         GameObject go = InstantiateEffect(effectType, Unit.transform.position);
         if (go == null)
         {
-            //Debug.Log("이펙트 없음");
+            Debug.Log($"{effectType}이펙트 없음");
             return;
         }
         go.transform.SetParent(Unit.transform);

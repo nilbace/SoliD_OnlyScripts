@@ -17,13 +17,18 @@ public class Card_RelicContainer
 
     public List<CardData> GetBaseDeck()
     {
-        var baseDeck = _allCardsList.GetRange(0, 20);
+        var baseDeck = _allCardsList.GetRange(0, 17);
         return baseDeck;
     }
 
     public void AddCardToAllCardList(CardData cardData)
     {
         _allCardsList.Add(cardData);
+    }
+
+    public RelicBase GetRelicByType(E_RelicType type)
+    {
+        return AllRelicList.FirstOrDefault(x => x.RelicType == type);
     }
 
     public List<CardData> GetRandomCardDatas(int number, E_CardTier? tier = null, E_CharName? cardOwner = null, E_WeaponType? weapon = null)

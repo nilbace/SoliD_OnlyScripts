@@ -61,7 +61,7 @@ public class YareYare : MonsterBase
 
         character.sprite = normalSprite;
         StartCoroutine(MoveOverTime(character.transform, startPos, moveTimeIn));
-        yield return StartCoroutine(Attack(15));
+        yield return StartCoroutine(AttackCoroutine(15));
         yield return new WaitForSeconds(moveTimeIn);
         balloon.SetActive(false);
     }

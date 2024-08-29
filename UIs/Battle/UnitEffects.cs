@@ -1,6 +1,8 @@
+using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UnitEffects : MonoBehaviour
 {
@@ -29,4 +31,12 @@ public class UnitEffects : MonoBehaviour
             newIcon.GetComponent<EffectIcon>().SetIcon(thisUnit.BuffList[i]);
         }
     }
+
+    //0.2ÃÊ°£ ¹ÝÂ¦ÀÓ
+    public void TwinkleIcion(int index)
+    {
+        var img_RelicIcon = transform.GetChild(index).GetComponent<Image>();
+        img_RelicIcon.TwinkleIcon();
+    }
+
 }

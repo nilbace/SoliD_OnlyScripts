@@ -16,7 +16,7 @@ public enum E_CharNameKor
     최설하,
     황예린,
 }
-public enum EnemyDifficultyType { Normal, Elite, Boss }
+public enum E_EnemyDifficultyType { Normal, Elite, Boss }
 
 public enum E_CardType { Attack, Defence, Skill }
 public enum E_CardColor { Magenta, Cyan, Yellow, Black }
@@ -71,11 +71,13 @@ public class CardData
     public bool WillExpire;
     public string CardSpriteNameString;
     public List<CardEffectData> CardEffectList;
-    public string DamageEffectType;
+    public E_EffectType DamageEffectType;
+    public List<int> TooltipData;
 
     public CardData()
     {
         CardEffectList = new List<CardEffectData>();
+        TooltipData = new List<int>();
     }
 }
 

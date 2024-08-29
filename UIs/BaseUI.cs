@@ -12,6 +12,8 @@ public class BaseUI : MonoBehaviour
     public Transform TR_RelicParent;
     public GameObject RelicGO;
     public List<RelicGO> RelicGOList;
+    public TMP_Text TMP_DeckCount;
+    public GameObject CardListPopup;
 
     private void Awake()
     {
@@ -20,12 +22,18 @@ public class BaseUI : MonoBehaviour
 
     public void UpdateUIs()
     {
-        TMP_Gold.text = GameManager.UserData.MoonStoneAmount.ToString();
+        TMP_Gold.text = TrialManager.Inst.MoonStone.ToString();
+        TMP_DeckCount.text = TrialManager.Inst.UserDeck.Count.ToString();
     }
 
     public void MapBTN()
     {
         Map.MapView.Inst.MapBTN();
+    }
+
+    public void DeckBTN()
+    {
+        UI_CardOverView.Inst.ShowOverview(E_CardOverviewType.UserDeck);
     }
 
     /// <summary>
@@ -43,6 +51,16 @@ public class BaseUI : MonoBehaviour
     public void TwinkleRelicIcon(int index)
     {
         TR_RelicParent.GetChild(index).GetComponent<RelicGO>().TwinkleIcon();
+    }
+
+    public void TwinkleRelicIcon(E_RelicType type)
+    {
+        int relicIdnex = 0;
+        foreach (RelicBase relic in TrialManager.Inst.RelicList)
+        {
+            if (relic.RelicType == type) relicIdnex = TrialManager.Inst.RelicList.IndexOf(relic);
+        }
+        TwinkleRelicIcon(relicIdnex);
     }
 
     public void UpdateRelicStacks()

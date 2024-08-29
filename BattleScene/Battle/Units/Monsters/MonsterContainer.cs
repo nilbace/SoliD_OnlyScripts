@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum E_MinorEnemyType { Yare, SeekeroftheRainbow, MaxCount}
+public enum E_MinorEnemyType { Yare, SeekeroftheRainbow, Slime_F, SunEnergy, MaxCount }
 public class MonsterContainer : MonoBehaviour
 {
     public GameObject[] Minor_Monsters;
@@ -17,6 +17,12 @@ public class MonsterContainer : MonoBehaviour
     public GameObject GetMonsterByType(E_MinorEnemyType minorEnemyType)
     {
         return Minor_Monsters[(int)minorEnemyType];
+    }
+
+    public GameObject GetMonsterByType()
+    {
+        var rand = Random.Range(0, (int)E_MinorEnemyType.MaxCount);
+        return Minor_Monsters[(int)rand];
     }
 
     public GameObject GetMonsterByType(int index)

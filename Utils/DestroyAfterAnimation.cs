@@ -35,9 +35,9 @@ public class DestroyAfterAnimation : MonoBehaviour
                         break;
                     }
                 }
-
+                float nowSpeed = animator.GetCurrentAnimatorStateInfo(0).speed;
                 // 애니메이션 클립 길이 후에 오브젝트 파괴
-                StartCoroutine(DestroyAfterTime(clipLength));
+                StartCoroutine(DestroyAfterTime(clipLength * 1/nowSpeed));
             }
             else
             {

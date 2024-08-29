@@ -8,6 +8,6 @@ public class GoldReward : MonoBehaviour
 
     public void OnClick()
     {
-        GameManager.Reward.AddMoonStone();
+        TrialManager.Inst.AddMoonStone(GoldRewardAmount);
     }
 }

@@ -1,19 +1,23 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 public enum E_EffectType
 {
     //버프 디버프 종류
-    Crystallization, Blessing, Vulnerability, Weakening, Bloodstain, Blade,
-    BlueDragon, WhiteTiger, RedBird, BlackTortoise, Frost,
-    Electrocution, Burn, Posion, HeadShot, SharpShooter, ReaperMark, DemonicWhisper, DarkMagic, SugarRush, CombatStance, Strength,
+    Crystallization, Blessing, Vulnerability, Weakening, Bleeding, Blade,
+    BlueDragon, WhiteTiger, RedBird, BlackTortoise, Freeze,
+    Lightning, Burn, Posion, HeadShot, SharpShooter, ReaperMark, DemonicWhisper, DarkMagic, SugarRush, CombatStance, Strength,
 
     //몬스터 전용 특수 버프들
     LightThirst,
 
+    //카드 이펙트 관련
+    Talisman_Attack, Blade_Attack, ShotGun_Attack, Talisman_Finisher, Talisman_RB, Talisman_BT, Talisman_BD, Talisman_WT, ShotGun_Finisher, Scythe_Attack, Staff_Attack,
+    Black_Attack, Blade_Finisher, None,
 
     //카드 관련 효과들
-    Interval, Damage, Energy, Shield, Heal, Black, DrawCard, MakeCardToHand, CheckStatusEffect, DiscardRandomCard, CheckHasDebuff, SelfHarm, HealLowestHPAlly,
+    Interval, Damage, Energy, Shield, Heal, DrawCard, MakeCardToHand, CheckStatusEffect, DiscardRandomCard, CheckHasDebuff, SelfHarm, HealLowestHPAlly,
     AddRandomBullet,ShootBullet, AddRandomFourGods, DrainMagic, FourGodsJudgement, CatchingBreath, Stuntman, Overcome, LastShot, UnfairTrade, LastMercy,
     AddRandomBlackCard, AllOutAttack, SoSweet, SacrificeOfBlood, Purify, BloodySword, SilverDance, Shimai, RipWound, EZ,
 }
@@ -37,8 +41,8 @@ public class BuffFactory
             case E_EffectType.Weakening:
                 return new Weakening(amount);
 
-            case E_EffectType.Bloodstain:
-                return new Bloodstain(amount);
+            case E_EffectType.Bleeding:
+                return new Bleeding(amount);
 
             case E_EffectType.Blade:
                 return new Blade(amount);
@@ -55,11 +59,11 @@ public class BuffFactory
             case E_EffectType.BlackTortoise:
                 return new BlackTortoise(amount);
 
-            case E_EffectType.Frost:
-                return new Frost(amount);
+            case E_EffectType.Freeze:
+                return new Freeze(amount);
 
-            case E_EffectType.Electrocution:
-                return new Electrocution(amount);
+            case E_EffectType.Lightning:
+                return new Lightning(amount);
 
             case E_EffectType.Burn:
                 return new Burn(amount);
@@ -110,6 +114,8 @@ public abstract class BuffBase
     public float Duration;
     public float Stack;
     public string InfoText;
+    public bool isDealerBuff;
+    public bool isDefensiveBuff;
     public bool IsDebuff = false;
 
     public BuffBase(E_EffectType effectType, float duration, float stack, string infoText)
@@ -131,7 +137,7 @@ public abstract class BuffBase
     protected virtual void ApplyOrUpdateEffectByStack(UnitBase unit)
     {
         var existingEffect = unit.BuffList.FirstOrDefault(e => e.BuffType == this.BuffType);
-
+        SortBuffList(unit);
         if (existingEffect != null)
         {
             existingEffect.Stack += this.Stack;
@@ -149,7 +155,7 @@ public abstract class BuffBase
     protected virtual void ApplyOrUpdateEffectByDuration(UnitBase unit)
     {
         var existingEffect = unit.BuffList.FirstOrDefault(e => e.BuffType == this.BuffType);
-
+        SortBuffList(unit);
         if (existingEffect != null)
         {
             existingEffect.Duration += this.Duration;
@@ -163,6 +169,28 @@ public abstract class BuffBase
             unit.BuffList.Add(this);
         }
     }
+
+    protected virtual void SortBuffList(UnitBase unit)
+    {
+        // 특정 버프의 우선순위를 정의
+        var buffPriority = new List<E_EffectType>
+    {
+        E_EffectType.DemonicWhisper,
+        E_EffectType.DarkMagic,
+        E_EffectType.CombatStance,
+        E_EffectType.Blade,
+        E_EffectType.SharpShooter
+    };
+
+        unit.BuffList = unit.BuffList
+            .OrderByDescending(buff => buffPriority.Contains(buff.BuffType)) // 특정 버프가 포함되면 우선
+            .ThenBy(buff => buffPriority.IndexOf(buff.BuffType)) // 특정 버프의 우선순위에 따라 정렬
+            .ThenByDescending(buff => buff.Duration < 0) // 영구 지속 버프를 우선
+            .ThenByDescending(buff => buff.Duration > 0) // 그 다음 일시적 지속 버프
+            .ToList();
+    }
+
+
 }
 
 public class Crystallization : BuffBase
@@ -192,7 +220,9 @@ public class Vulnerability : BuffBase
 {
     public Vulnerability(float duration) : base(E_EffectType.Vulnerability, duration, -1,
         "적에게 피해를 받을 때 50%(소수점 버림)의 피해를 추가로 입는다. 다음 턴 시작시 1 감소")
-    { IsDebuff = true; }
+    { IsDebuff = true;
+        isDefensiveBuff = true;
+    }
     public override void ApplyEffect(UnitBase unit)
     {
         ApplyOrUpdateEffectByDuration(unit);
@@ -203,16 +233,16 @@ public class Weakening : BuffBase
 {
     public Weakening(float duration) : base(E_EffectType.Weakening, duration, -1,
         "적에게 주는 피해량이 25%(소수점 버림)만큼 줄어든다. 다음 턴 시작시 1 감소")
-    { IsDebuff = true; }
+    { IsDebuff = true; isDealerBuff = true; }
     public override void ApplyEffect(UnitBase unit)
     {
         ApplyOrUpdateEffectByDuration(unit);
     }
 }
 
-public class Bloodstain : BuffBase
+public class Bleeding : BuffBase
 {
-    public Bloodstain(float duration) : base(E_EffectType.Bloodstain, duration, -1,
+    public Bleeding(float duration) : base(E_EffectType.Bleeding, duration, -1,
         "다음 턴 시작 시 1 감소한다.")
     { }
     public override void ApplyEffect(UnitBase unit)
@@ -226,7 +256,7 @@ public class Blade : BuffBase
 {
     public Blade(float stack) : base(E_EffectType.Blade, -1, stack,
         "0 코스트 카드 사용 시 해당 수치만큼 추가 데미지를 가한다. 전투 내내 지속")
-    { }
+    { isDealerBuff = true; }
 
     public override void ApplyEffect(UnitBase unit)
     {
@@ -278,9 +308,9 @@ public class BlackTortoise : BuffBase
     }
 }
 
-public class Frost : BuffBase
+public class Freeze : BuffBase
 {
-    public Frost(float duration) : base(E_EffectType.Frost, duration, -1,
+    public Freeze(float duration) : base(E_EffectType.Freeze, duration, -1,
         "얻는 쉴드량 50%감소, 턴마다 1감소")
     { IsDebuff = true; }
     public override void ApplyEffect(UnitBase unit)
@@ -289,9 +319,9 @@ public class Frost : BuffBase
     }
 }
 
-public class Electrocution : BuffBase
+public class Lightning : BuffBase
 {
-    public Electrocution(float duration) : base(E_EffectType.Electrocution, duration, -1,
+    public Lightning(float duration) : base(E_EffectType.Lightning, duration, -1,
         "방어막에 막히지 않는 공격에 스탯만큼의 추가딜, 턴마다 1 감소")
     { IsDebuff = true; }
     public override void ApplyEffect(UnitBase unit)
@@ -338,7 +368,7 @@ public class HeadShot : BuffBase
 {
     public HeadShot(float duration) : base(E_EffectType.HeadShot, duration, -1,
         "총으로 받는 피해 50%증가 및 효과 지속시간 50%증가, 턴마다 1감소")
-    { IsDebuff = true; }
+    { IsDebuff = true; isDefensiveBuff = true; }
     public override void ApplyEffect(UnitBase unit)
     {
         ApplyOrUpdateEffectByStack(unit);
@@ -350,7 +380,7 @@ public class SharpShooter : BuffBase
 {
     public SharpShooter(float stack) : base(E_EffectType.SharpShooter, -1, stack,
         "총으로 가하는 피해 50%증가, 영구 지속")
-    { }
+    { isDealerBuff = true; }
     public override void ApplyEffect(UnitBase unit)
     {
         ApplyOrUpdateEffectByStack(unit);
@@ -386,7 +416,7 @@ public class DarkMagic : BuffBase
 {
     public DarkMagic(float stack) : base(E_EffectType.DarkMagic, -1, stack,
         "검정카드 사용 시 1 증가, 흑마력 스탯만큼 추가딜 들어가고 깎이는 HP 증가")
-    { }
+    { isDealerBuff = true;   }
     public override void ApplyEffect(UnitBase unit)
     {
         ApplyOrUpdateEffectByStack(unit);
@@ -414,10 +444,6 @@ public class CombatStance : BuffBase
         ApplyOrUpdateEffectByStack(unit);
     }
 
-    public override void NextTurnStarted(UnitBase unit)
-    {
-        HandManager.Inst.AddCardToHandCoroutine(GameManager.Card_RelicContainer.GetCardDataByIndex(87));
-    }
 }
 
 public class LightThirst : BuffBase
