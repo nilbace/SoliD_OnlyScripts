@@ -9,8 +9,14 @@ public class DragParentNonUI : MonoBehaviour
     private float maxY = 0.77f;   // y축 최대 제한
     private Vector3 offset;
     private Vector3 startParentPosition;
+    public static DragParentNonUI Inst;
 
-    void OnMouseDown()
+    private void Awake()
+    {
+        Inst = this;
+    }
+
+    public void OnMouseDown()
     {
         // 부모 오브젝트의 시작 위치를 저장합니다.
         startParentPosition = transform.parent.position;
@@ -19,7 +25,8 @@ public class DragParentNonUI : MonoBehaviour
         offset = startParentPosition - mousePosition;
     }
 
-    void OnMouseDrag()
+
+    public void OnMouseDrag()
     {
         transform.parent.DOKill();
         // 현재 마우스 위치를 가져옵니다.
@@ -29,7 +36,7 @@ public class DragParentNonUI : MonoBehaviour
         transform.parent.position = new Vector3(startParentPosition.x, mousePosition.y, startParentPosition.z);
     }
 
-    void OnMouseUp()
+    public void OnMouseUp()
     {
         // 드래그가 끝나면 부모 오브젝트의 y축 위치를 확인하고, 범위를 벗어난 경우 제한 범위로 이동
         float currentY = transform.parent.position.y;
@@ -45,11 +52,16 @@ public class DragParentNonUI : MonoBehaviour
 
     private void OnEnable()
     {
+        CallWhenEnabled();
+    }
+
+    public void CallWhenEnabled()
+    {
         if (UI_CardOverView.Inst == null) return;
-        var temp = (UI_CardOverView.Inst.NowCardCount-1) / 5;
+        var temp = (UI_CardOverView.Inst.NowCardCount - 1) / 5;
         temp++;
         if (temp == 1) { maxY = 0; return; }
-        if (temp >= 3) maxY = 0.77f + (temp-2) * 5.32f;
+        if (temp >= 3) maxY = 0.77f + (temp - 2) * 5.32f;
         else maxY = 0.77f;
     }
 }

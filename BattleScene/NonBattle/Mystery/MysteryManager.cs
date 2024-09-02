@@ -18,6 +18,7 @@ public class MysteryManager : MonoBehaviour
     }
     /// <summary>
     /// Mystery에 진입하면 호출되는 함수
+    /// 적당한 게임을 키거나 전투를 실행시킴
     /// </summary>
     private void OnEnable()
     {
@@ -27,9 +28,6 @@ public class MysteryManager : MonoBehaviour
     {
         int index = GetRandomGameIndex();
         Instantiate(Games[GetRandomGameIndex()], transform);
-
-        GameManager.Novel.StartStory(E_MysteryType.ScienceClassroom);
-
 
         if (TrialManager.Inst.HasRelic(E_RelicType.QuestionCollector))
         {
@@ -49,10 +47,13 @@ public class MysteryManager : MonoBehaviour
         return 0;
     }
 
+    /// <summary>
+    /// ?방 이벤트가 끝나면 호출되는 함수
+    /// 이 함수를 호출 이후 자기 자신을 Destroy하면 됨
+    /// </summary>
     public void ExitMystery()
     {
         gameObject.SetActive(false);
-        Games[_nowGameIndex].SetActive(false);
         Map.MapPlayerTracker.Instance.Locked = false;
         BaseUI.Inst.MapBTN();
     }

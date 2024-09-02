@@ -13,8 +13,8 @@ using UnityEngine;
 
 public class BattleManager : MonoSingleton<BattleManager>
 {
-    public List<UnitBase> PlayerUnits;
-    public List<MonsterBase> MonsterUnits;
+    public List<UnitBase> PlayerUnits = new List<UnitBase>();
+    public List<MonsterBase> MonsterUnits = new List<MonsterBase>();
     public int MonsterCount;
     public Action OnBattleStart { get; set; }
     public Action OnBattleEnd { get; set; }
@@ -44,8 +44,6 @@ public class BattleManager : MonoSingleton<BattleManager>
     protected override void Awake()
     {
         base.Awake();
-        PlayerUnits = new List<UnitBase>();
-        MonsterUnits = new List<MonsterBase>();
     }
 
     private void Start()
@@ -87,6 +85,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         TurnCount = 0;
         NowEnergy = 0;
         IsOnBattle = true;
+        StartCoroutine(ReorganizePlayersWhenDeadCoroutine());
 
         // 데이터 초기화 및 적 설정
         ResetDatas();
@@ -238,7 +237,8 @@ public class BattleManager : MonoSingleton<BattleManager>
             IsOnBattle = false;
             ClearPlayerStatusEffects();
             HandManager.Inst.DiscardAllCardsFromHand();
-            GameManager.Reward.GenerateReward(E_EnemyDifficultyType.Normal);
+            MovePlayersToBasePoz();
+            GameManager.Reward.GenerateReward(EnemyDifficultyType);
         });
     }
 
@@ -400,7 +400,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     }
 
     #region 캐릭터 이동 관련
-    public Sequence MoveCharFront(E_CharName cardOwner)
+    public Sequence MovePlayerFront(E_CharName cardOwner)
     {
         // cardOwner와 일치하는 캐릭터를 찾습니다.
         GameObject targetChar = null;
@@ -450,7 +450,19 @@ public class BattleManager : MonoSingleton<BattleManager>
         return moveSequence;
     }
 
-    public IEnumerator ReorganizeCharactersWhenDeadCoroutine()
+    public void MovePlayersToBasePoz()
+    {
+        foreach (UnitBase player in PlayerUnits)
+        {
+            player.transform.localScale = Vector3.one * 1.5f;
+        }
+
+        GetPlayer(E_CharName.Minju).transform.DOMove(Vector3.right * 4.5f, PlayerMoveDuration);
+        GetPlayer(E_CharName.Seolha).transform.DOMove(Vector3.zero * 4.5f, PlayerMoveDuration);
+        GetPlayer(E_CharName.Yerin).transform.DOMove(Vector3.left * 4.5f, PlayerMoveDuration);
+    }
+
+    public IEnumerator ReorganizePlayersWhenDeadCoroutine()
     {
         // 살아있는 캐릭터를 앞으로, 죽은 캐릭터를 뒤로 이동시키기 위해 리스트를 정렬합니다.
         PlayerUnits.Sort((a, b) => a.isAlive() == b.isAlive() ? 0 : a.isAlive() ? -1 : 1);

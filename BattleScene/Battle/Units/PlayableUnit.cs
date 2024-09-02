@@ -42,22 +42,25 @@ public class PlayableUnit : UnitBase
 
         yield return base.AddBarrierCoroutine(resultAmount);
     }
- 
-    
+
+    protected override void Awake()
+    {
+        base.Awake();
+        
+    }
     protected virtual void Start()
     {
-        MaxHP = 2000; SetNowHpToMaxHP();
+        MaxHP = 20; SetNowHpToMaxHP();
         BattleManager.Inst.PlayerUnits.Add(this);
-        if(BattleManager.Inst.PlayerUnits.Count==3)
+        if (BattleManager.Inst.PlayerUnits.Count == 3)
         {
-            var seq = DOTween.Sequence();
-            seq.Append(BattleManager.Inst.MoveCharFront(E_CharName.Minju));
+            BattleManager.Inst.MovePlayersToBasePoz();
         }
     }
 
     public override IEnumerator DeadCoroutine()
     {
         yield return StartCoroutine(base.DeadCoroutine());
-        yield return StartCoroutine(BattleManager.Inst.ReorganizeCharactersWhenDeadCoroutine());
+        yield return StartCoroutine(BattleManager.Inst.ReorganizePlayersWhenDeadCoroutine());
     }
 }

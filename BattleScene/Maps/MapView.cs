@@ -61,6 +61,7 @@ namespace Map
 
         public static MapView Inst;
         private bool isHide;
+        public float NodeIconSize;
 
         public Map Map { get; protected set; }
 
@@ -131,7 +132,10 @@ namespace Map
             sr.drawMode = SpriteDrawMode.Sliced;
             sr.sprite = background;
             sr.size = new Vector2(xSize, span + yOffset * 2f);
+            sr.gameObject.transform.localPosition += Vector3.up * MapYOffsetTONodes;
         }
+
+        public float MapYOffsetTONodes;
 
         protected virtual void CreateMapParent()
         {
@@ -159,6 +163,7 @@ namespace Map
         protected virtual MapNode CreateMapNode(Node node)
         {
             var mapNodeObject = Instantiate(nodePrefab, mapParent.transform);
+            mapNodeObject.transform.localScale = mapNodeObject.transform.localScale * NodeIconSize;
             var mapNode = mapNodeObject.GetComponent<MapNode>();
             var blueprint = GetBlueprint(node.blueprintName);
             mapNode.SetUp(node, blueprint);
@@ -366,7 +371,10 @@ namespace Map
             var bossNode = MapNodes.FirstOrDefault(node => node.Node.nodeType == NodeType.Boss);
             float bossNodePozX = bossNode.gameObject.transform.position.x;
             mapParent.transform.position += new Vector3(-bossNodePozX, 0, 0);
+            firstParent.transform.position += Vector3.up * yOffset * MapExtraYOffset;
         }
+
+        public float MapExtraYOffset;
 
         public void SetSortingLayer()
         {

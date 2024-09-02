@@ -28,7 +28,7 @@ namespace Map
         public NodeBlueprint Blueprint { get; private set; }
 
         private float initialScale = 0.16f;
-        private const float HoverScaleFactor = 1.2f;
+        public  float HoverScaleFactor;
         private float mouseDownTime;
 
         private const float MaxClickDuration = 0.5f;

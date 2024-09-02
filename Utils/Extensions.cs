@@ -18,4 +18,12 @@ public static class Extensions
         img.rectTransform.DOScale(1f, twinkleTime).SetEase(Ease.InOutSine).SetDelay(twinkleTime);
         img.DOFade(1f, twinkleTime).SetEase(Ease.InOutSine).SetDelay(twinkleTime);
     }
+
+    public static void UpdateHP(this Slider slider, UnitBase unit)
+    {
+        if (unit != null)
+        {
+            slider.value = Mathf.Clamp(((float)unit.GetHP() / (float)unit.MaxHP), 0.045f, 1f);
+        }
+    }
 }

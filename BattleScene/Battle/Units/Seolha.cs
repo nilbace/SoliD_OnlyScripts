@@ -89,7 +89,7 @@ public class Seolha : PlayableUnit
     }
 
 
-    public IEnumerator ShootBulletToTarget()
+    public IEnumerator ShootBulletToTargetCoroutine()
     {
         if (LoadedBulletList.Count > 0)
         {

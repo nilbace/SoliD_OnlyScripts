@@ -72,12 +72,12 @@ public class CardMouseDetection : MonoBehaviour
         //어느정도 들어 올려야 사용중 판정
         if (!IsDraggingOverUsingZone && transform.position.y > _yOffset)
         {
-            //코스트 여유가 되지 않으면
+            //코스트 여유가 되지 않으면 취소
             if(_thisCardData.CardCost > GameManager.Battle.NowEnergy)
             {
                 CancelUse();
             }
-            //이 카드의 사용자가 죽어있다면
+            //이 카드의 사용자가 죽어있다면 취소
             else if(!BattleManager.Inst.GetPlayer(_thisCardData.CardOwner).isAlive())
             {
                 CancelUse();

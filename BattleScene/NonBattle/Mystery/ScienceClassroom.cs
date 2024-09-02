@@ -22,6 +22,7 @@ public class ScienceClassroom : MonoBehaviour
         _resultColor = Color.white;
         ResultBeaker.color = Color.white;
         MakeAnswerColor();
+        GameManager.Novel.StartStory(E_MysteryType.ScienceClassroom);
     }
 
     private void MakeAnswerColor()

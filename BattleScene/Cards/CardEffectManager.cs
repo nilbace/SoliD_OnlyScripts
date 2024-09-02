@@ -32,7 +32,7 @@ public class CardEffectManager : MonoBehaviour
         //카드에 필요한 코스트 사용
         GameManager.Battle.UseEnergy(NowCardData.CardCost);
         //카드 사용자가 앞으로 나섬
-        GameManager.Battle.MoveCharFront(NowCardData.CardOwner);
+        GameManager.Battle.MovePlayerFront(NowCardData.CardOwner);
 
         //각 카드 효과 발동
         foreach (CardEffectData cardEffectData in NowCardData.CardEffectList)
@@ -151,7 +151,7 @@ public class CardEffectManager : MonoBehaviour
                     break;
 
                 case E_EffectType.ShootBullet:
-                    yield return StartCoroutine(Seolha.Inst.ShootBulletToTarget());
+                    yield return StartCoroutine(Seolha.Inst.ShootBulletToTargetCoroutine());
                     break;
 
 
@@ -204,7 +204,7 @@ public class CardEffectManager : MonoBehaviour
                         for (int i = 0; i < bulletCount; i++)
                         {
                             if(BattleManager.Inst.TargetMonster.isAlive())
-                                yield return StartCoroutine(Seolha.Inst.ShootBulletToTarget());
+                                yield return StartCoroutine(Seolha.Inst.ShootBulletToTargetCoroutine());
                         }
                     }
                     break;
@@ -412,9 +412,12 @@ public class CardEffectManager : MonoBehaviour
             else
             {
                 var enemies = BattleManager.Inst.GetProperUnits(NowCardData.CardOwner, E_TargetType.AllEnemies);
-                foreach (UnitBase enemy in enemies)
+                if (enemies != null)
                 {
-                    yield return StartCoroutine((enemy as MonsterBase).AddInk(NowCardData.CardColor));
+                    foreach (UnitBase enemy in enemies)
+                    {
+                        yield return StartCoroutine((enemy as MonsterBase).AddInk(NowCardData.CardColor));
+                    }
                 }
             }
         }

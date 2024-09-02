@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using UnityEngine.UI;
 
 public enum E_CardOverviewType { UserDeck, DrawPile, DiscardPile, DuplicateCard, RemoveCard}
 
@@ -15,6 +16,9 @@ public class UI_CardOverView : MonoBehaviour
     private bool _isOpened;
     public E_CardOverviewType OverviewType;
     public int NowCardCount;
+    public float CardSize;
+    public Button BackBTN;
+
 
 
     private void Awake()
@@ -29,13 +33,13 @@ public class UI_CardOverView : MonoBehaviour
         //이미 그 패널이 열려있는거라면
         if (_isOpened && OverviewType == type)
         {
-            ClosePannel(); RemoveAllChildren();
-            return;
+            ClosePannel();
         }
         //열린 패널이 없거나 다른 패널이 열려있다면
         //패널을 닫고 올바른 패널을 열음
-        ClosePannel();
         RemoveAllChildren();
+        ClosePannel();
+        DragParentNonUI.Inst.CallWhenEnabled();
         OverviewType = type;
 
         switch (type)
@@ -56,7 +60,7 @@ public class UI_CardOverView : MonoBehaviour
                 ShowUserDeck();
                 break;
         }
-
+        BackBTN.gameObject.SetActive(true);
     }
 
     private void ShowUserDeck()
@@ -85,6 +89,7 @@ public class UI_CardOverView : MonoBehaviour
         for (int i = 0; i < cardList.Count; i++)
         {
             GameObject go = Instantiate(CardGO, transform);
+            go.transform.localScale = go.transform.localScale * CardSize;
             go.AddComponent<Overview_CardTouch>();
             var cardgo = go.GetComponent<CardGO>();
             cardgo.thisCardData = cardList[i];
@@ -92,11 +97,12 @@ public class UI_CardOverView : MonoBehaviour
             cardgo.SetSortingLayerForChildren("CardList");
         }
 
-        ArrangeCards();
+        StartCoroutine(ArrangeCardsCoroutine());
     }
 
-    private void ArrangeCards()
+    private IEnumerator ArrangeCardsCoroutine()
     {
+        yield return new WaitForEndOfFrame();
         int childCount = transform.childCount;
 
         for (int i = 0; i < childCount; i++)
@@ -116,6 +122,7 @@ public class UI_CardOverView : MonoBehaviour
     {
         _isOpened = false;
         transform.parent.gameObject.SetActive(false);
+        BackBTN.gameObject.SetActive(false);
     }
 
     private void OnDisable()
