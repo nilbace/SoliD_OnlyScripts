@@ -4,18 +4,29 @@ using UnityEngine;
 
 namespace Map
 {
+    /// <summary>
+    /// 주어진 MapConfig에 따라 맵을 생성하는 클래스
+    /// Layer = 가로 한 층(여러 노드 배치 가능)
+    /// Layer들이 모이고 사이에 여러 노드들에 길이 생기며 미니맵이 생성되는 형식
+    /// </summary>
     public static class MapGenerator
     {
         private static MapConfig config;
 
+        // 무작위로 생성 가능한 노드 타입들
         private static readonly List<NodeType> RandomNodes = new List<NodeType>
         {NodeType.Mystery, NodeType.Store, NodeType.Treasure, NodeType.MinorEnemy, NodeType.RestSite};
 
         private static List<float> layerDistances;
         private static List<List<Point>> paths;
-        // ALL nodes by layer:
+        //전체 노드
         private static readonly List<List<Node>> nodes = new List<List<Node>>();
 
+        /// <summary>
+        /// 주어진 설정에 따라 지도를 생성합니다.
+        /// </summary>
+        /// <param name="conf">지도 생성 설정</param>
+        /// <returns>생성된 지도 객체</returns>
         public static Map GetMap(MapConfig conf)
         {
             if (conf == null)
@@ -40,14 +51,17 @@ namespace Map
 
             RemoveCrossConnections();
 
-            // select all the nodes with connections:
+            // 연결이 있는 모든 노드 선택
             var nodesList = nodes.SelectMany(n => n).Where(n => n.incoming.Count > 0 || n.outgoing.Count > 0).ToList();
 
-            // pick a random name of the boss level for this map:
+            // 보스 레벨의 랜덤 이름 선택
             var bossNodeName = config.nodeBlueprints.Where(b => b.nodeType == NodeType.Boss).ToList().Random().name;
             return new Map(conf.name, bossNodeName, nodesList, new List<Point>());
         }
 
+        /// <summary>
+        /// 각 레이어 간의 거리 계산
+        /// </summary>
         private static void GenerateLayerDistances()
         {
             layerDistances = new List<float>();
@@ -55,6 +69,11 @@ namespace Map
                 layerDistances.Add(layer.distanceFromPreviousLayer.GetValue());
         }
 
+        /// <summary>
+        /// 특정 레이어까지의 거리 반환
+        /// </summary>
+        /// <param name="layerIndex">레이어 인덱스</param>
+        /// <returns>레이어까지의 거리</returns>
         private static float GetDistanceToLayer(int layerIndex)
         {
             if (layerIndex < 0 || layerIndex > layerDistances.Count) return 0f;
@@ -62,6 +81,10 @@ namespace Map
             return layerDistances.Take(layerIndex + 1).Sum();
         }
 
+        /// <summary>
+        /// 지정된 레이어에 노드를 배치합니다.
+        /// </summary>
+        /// <param name="layerIndex">레이어 인덱스</param>
         private static void PlaceLayer(int layerIndex)
         {
             var layer = config.layers[layerIndex];
@@ -84,6 +107,9 @@ namespace Map
             nodes.Add(nodesOnThisLayer);
         }
 
+        /// <summary>
+        /// 노드의 위치를 무작위로 변경하여 변동성 추가
+        /// </summary>
         private static void RandomizeNodePositions()
         {
             for (var index = 0; index < nodes.Count; index++)
@@ -108,6 +134,9 @@ namespace Map
             }
         }
 
+        /// <summary>
+        /// 노드 간의 연결 설정
+        /// </summary>
         private static void SetUpConnections()
         {
             foreach (var path in paths)
@@ -122,6 +151,9 @@ namespace Map
             }
         }
 
+        /// <summary>
+        /// 교차 연결을 제거하여 지도를 정리
+        /// </summary>
         private static void RemoveCrossConnections()
         {
             for (var i = 0; i < config.GridWidth - 1; ++i)
@@ -136,46 +168,44 @@ namespace Map
                     var topRight = GetNode(new Point(i + 1, j + 1));
                     if (topRight == null || topRight.HasNoConnections()) continue;
 
-                    // Debug.Log("Inspecting node for connections: " + node.point);
+                    // 교차 연결 노드를 검사합니다.
                     if (!node.outgoing.Any(element => element.Equals(topRight.point))) continue;
                     if (!right.outgoing.Any(element => element.Equals(top.point))) continue;
 
-                    // Debug.Log("Found a cross node: " + node.point);
-
-                    // we managed to find a cross node:
-                    // 1) add direct connections:
+                    // 직접 연결을 추가
                     node.AddOutgoing(top.point);
                     top.AddIncoming(node.point);
 
                     right.AddOutgoing(topRight.point);
                     topRight.AddIncoming(right.point);
 
+                    // 무작위로 교차 연결 제거
                     var rnd = Random.Range(0f, 1f);
                     if (rnd < 0.2f)
                     {
-                        // remove both cross connections:
-                        // a) 
                         node.RemoveOutgoing(topRight.point);
                         topRight.RemoveIncoming(node.point);
-                        // b) 
                         right.RemoveOutgoing(top.point);
                         top.RemoveIncoming(right.point);
                     }
                     else if (rnd < 0.6f)
                     {
-                        // a) 
                         node.RemoveOutgoing(topRight.point);
                         topRight.RemoveIncoming(node.point);
                     }
                     else
                     {
-                        // b) 
                         right.RemoveOutgoing(top.point);
                         top.RemoveIncoming(right.point);
                     }
                 }
         }
 
+        /// <summary>
+        /// 특정 위치에 있는 노드를 반환
+        /// </summary>
+        /// <param name="p">노드의 위치</param>
+        /// <returns>해당 위치의 노드</returns>
         private static Node GetNode(Point p)
         {
             if (p.y >= nodes.Count) return null;
@@ -184,6 +214,10 @@ namespace Map
             return nodes[p.y][p.x];
         }
 
+        /// <summary>
+        /// 마지막 보스 노드를 반환
+        /// </summary>
+        /// <returns>보스 노드의 위치</returns>
         private static Point GetFinalNode()
         {
             var y = config.layers.Count - 1;
@@ -195,6 +229,9 @@ namespace Map
                 : new Point(config.GridWidth / 2 - 1, y);
         }
 
+        /// <summary>
+        /// 지도 경로를 생성
+        /// </summary>
         private static void GeneratePaths()
         {
             var finalNode = GetFinalNode();
@@ -225,7 +262,12 @@ namespace Map
             }
         }
 
-        // Generates a random path bottom up.
+        /// <summary>
+        /// 시작점과 끝점 사이의 무작위 경로를 생성합니다.
+        /// </summary>
+        /// <param name="fromPoint">시작점</param>
+        /// <param name="toPoint">끝점</param>
+        /// <returns>생성된 경로의 포인트 리스트</returns>
         private static List<Point> Path(Point fromPoint, Point toPoint)
         {
             int toRow = toPoint.y;

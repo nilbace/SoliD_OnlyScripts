@@ -10,7 +10,7 @@ public enum E_EffectType
     Lightning, Burn, Posion, HeadShot, SharpShooter, ReaperMark, DemonicWhisper, DarkMagic, SugarRush, CombatStance, Strength,
 
     //몬스터 전용 특수 버프들
-    LightThirst,
+    LightThirst, Monster_Attack,
 
     //카드 이펙트 관련
     Talisman_Attack, Blade_Attack, ShotGun_Attack, Talisman_Finisher, Talisman_RB, Talisman_BT, Talisman_BD, Talisman_WT, ShotGun_Finisher, Scythe_Attack, Staff_Attack,
@@ -104,6 +104,9 @@ public class BuffFactory
     }
 }
 
+/// <summary>
+/// 모든 버프, 디버프들이 상속받는 부모 클래스
+/// </summary>
 [System.Serializable]
 public abstract class BuffBase
 {
@@ -132,41 +135,41 @@ public abstract class BuffBase
     public virtual void NextTurnStarted(UnitBase unit)
     {
         if (Duration > 1) Duration--;
-        if (Duration == 1) unit.BuffList.Remove(this);
+        if (Duration == 1) unit.ActiveBuffList.Remove(this);
     }
     protected virtual void ApplyOrUpdateEffectByStack(UnitBase unit)
     {
-        var existingEffect = unit.BuffList.FirstOrDefault(e => e.BuffType == this.BuffType);
+        var existingEffect = unit.ActiveBuffList.FirstOrDefault(e => e.BuffType == this.BuffType);
         SortBuffList(unit);
         if (existingEffect != null)
         {
             existingEffect.Stack += this.Stack;
             if (existingEffect.Stack == 0)
             {
-                unit.BuffList.Remove(existingEffect);
+                unit.ActiveBuffList.Remove(existingEffect);
             }
         }
         else
         {
-            unit.BuffList.Add(this);
+            unit.ActiveBuffList.Add(this);
         }
     }
 
     protected virtual void ApplyOrUpdateEffectByDuration(UnitBase unit)
     {
-        var existingEffect = unit.BuffList.FirstOrDefault(e => e.BuffType == this.BuffType);
+        var existingEffect = unit.ActiveBuffList.FirstOrDefault(e => e.BuffType == this.BuffType);
         SortBuffList(unit);
         if (existingEffect != null)
         {
             existingEffect.Duration += this.Duration;
             if (existingEffect.Duration == 0)
             {
-                unit.BuffList.Remove(existingEffect);
+                unit.ActiveBuffList.Remove(existingEffect);
             }
         }
         else
         {
-            unit.BuffList.Add(this);
+            unit.ActiveBuffList.Add(this);
         }
     }
 
@@ -182,7 +185,7 @@ public abstract class BuffBase
         E_EffectType.SharpShooter
     };
 
-        unit.BuffList = unit.BuffList
+        unit.ActiveBuffList = unit.ActiveBuffList
             .OrderByDescending(buff => buffPriority.Contains(buff.BuffType)) // 특정 버프가 포함되면 우선
             .ThenBy(buff => buffPriority.IndexOf(buff.BuffType)) // 특정 버프의 우선순위에 따라 정렬
             .ThenByDescending(buff => buff.Duration < 0) // 영구 지속 버프를 우선
@@ -357,7 +360,7 @@ public class Posion : BuffBase
         if (Duration > 0) Duration--;
         if (Duration == 0)
         {
-            unit.BuffList.Remove(this);
+            unit.ActiveBuffList.Remove(this);
             unit.IsChained = false;
         }
     }

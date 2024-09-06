@@ -125,7 +125,7 @@ public class Seolha : PlayableUnit
 
     private void AddStackWhenAttackCardUsed()
     {
-        if (CardEffectManager.NowCardData.CardType == E_CardType.Attack) NowTurnUsedAttackCardCount++;
+        if (CardEffectManager.CurrentCardData.CardType == E_CardType.Attack) NowTurnUsedAttackCardCount++;
     }
 
     private void ResetNowTurnUsedAttackCardCount()

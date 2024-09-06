@@ -123,7 +123,7 @@ public class TrialManager : MonoBehaviour
             case E_RelicType.BlackRose:
                 {
                     var minju = battleManager.GetPlayer(E_CharName.Minju);
-                    if (minju.GetHP() <= minju.MaxHP * 0.5f)  // 민주의 체력이 50% 이하인지 확인
+                    if (minju.GetCurrentHP() <= minju.MaxHP * 0.5f)  // 민주의 체력이 50% 이하인지 확인
                     {
                         yield return StartCoroutine(minju.ApplyBuffCoroutine(E_EffectType.DarkMagic, 3));  // 흑마력 3 적용
                     }
@@ -133,7 +133,7 @@ public class TrialManager : MonoBehaviour
 
             case E_RelicType.DarkHeartbeat:
                 {
-                    var nowcardColor = CardEffectManager.NowCardData.CardColor;
+                    var nowcardColor = CardEffectManager.CurrentCardData.CardColor;
                     if (nowcardColor == E_CardColor.Black)
                     {
                         yield return StartCoroutine(battleManager.GetPlayer(E_CharName.Minju).HealCoroutine(2));
@@ -152,7 +152,7 @@ public class TrialManager : MonoBehaviour
 
             case E_RelicType.WrathElixir:
                 {
-                    if(CardEffectManager.NowCardData.CardType==E_CardType.Attack)
+                    if(CardEffectManager.CurrentCardData.CardType==E_CardType.Attack)
                     {
                         AddStack(E_RelicType.WrathElixir);
                         activated = false;
@@ -168,7 +168,7 @@ public class TrialManager : MonoBehaviour
 
             case E_RelicType.BladeofExecutor:
                 {
-                    if (CardEffectManager.NowCardData.CardType == E_CardType.Attack)
+                    if (CardEffectManager.CurrentCardData.CardType == E_CardType.Attack)
                     {
                         AddStack(E_RelicType.BladeofExecutor);
                         activated = false;
@@ -289,7 +289,7 @@ public class TrialManager : MonoBehaviour
             case E_RelicType.Macaron:
                 foreach (UnitBase player in BattleManager.Inst.PlayerUnits)
                 {
-                    player.SetNowHpToMaxHP();
+                    player.SetHP_To_Max_WithoutVFX();
                 }
                 break;
 

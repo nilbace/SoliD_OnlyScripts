@@ -7,9 +7,8 @@ using UnityEngine;
 
 
 /// <summary>
-/// 전투 대상, 턴, 캐릭터 이동 관리
+/// 캐릭터와 적, 턴 등 전투에 관련된 전반적인 로직을 관리
 /// </summary>
-/// TODO  90번째줄 수정 예정
 
 public class BattleManager : MonoSingleton<BattleManager>
 {
@@ -65,7 +64,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     public static bool TargetIsAlive()
     {
         if (Inst.TargetMonster == null) return false;
-        return Inst.TargetMonster.isAlive();
+        return Inst.TargetMonster.IsAlive();
     }
 
  
@@ -91,7 +90,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         ResetDatas();
 
         //Todo 각 전투마다 적절한 규칙에 따라 적 설정하도록 변경 
-        SpawnEnemy(MonsterContainer.Inst.GetMonsterByType(), new Vector3(2.5f, -0.3f, 0f));
+        SpawnEnemy(MonsterContainer.Inst.GetMonsterByType(), new Vector3(2.5f, 0.6f, 0f));
 
         // 전투 시작 이벤트 트리거
         OnBattleStart?.Invoke();
@@ -169,7 +168,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     {
         foreach(MonsterBase mon in MonsterUnits)
         {
-            if (!mon.isAlive()) continue;
+            if (!mon.IsAlive()) continue;
             mon.SetIntent();
         }
 
@@ -185,14 +184,14 @@ public class BattleManager : MonoSingleton<BattleManager>
         // 의도를 이제 안보이게 처리
         foreach (MonsterBase mon in MonsterUnits)
         {
-            if (!mon.isAlive()) continue;
+            if (!mon.IsAlive()) continue;
             mon.HideIntent();
         }
 
         // 몬스터마다 예정된 패턴 실행
         foreach (MonsterBase mon in MonsterUnits)
         {
-            if (!mon.isAlive()) continue;
+            if (!mon.IsAlive()) continue;
             yield return StartCoroutine(mon.StartNowPattern());
             yield return new WaitForSeconds(0.5f);
         }
@@ -210,7 +209,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         bool allMonstersDead = true;
         for (int i = 0; i < MonsterUnits.Count; i++)
         {
-            if (MonsterUnits[i].isAlive())
+            if (MonsterUnits[i].IsAlive())
             {
                 allMonstersDead = false;
                 break; 
@@ -246,7 +245,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     {
         foreach(UnitBase player in PlayerUnits)
         {
-            player.ClearStatusEffect();
+            player.ClearAllBuffs();
         }
     }
 
@@ -254,7 +253,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     #region MonsterBase 호출용 함수 목록
     public IEnumerator MonsterAttackPlayer(float amount)
     {
-        return PlayerUnits[0].GetDamageCoroutine(amount, E_EffectType.Bleeding);
+        return PlayerUnits[0].GetDamageCoroutine(amount, E_EffectType.Monster_Attack);
     }
 
     public IEnumerator MonsterApplyEffect_To_Player(E_EffectType buff, float amount)
@@ -280,13 +279,13 @@ public class BattleManager : MonoSingleton<BattleManager>
         for (int i = 0; i < units.Count; i++)
         {
             UnitBase unit = units[i];
-            if (!unit.isAlive()) continue;
-            for (int j = 0; j < unit.BuffList.Count; j++)
+            if (!unit.IsAlive()) continue;
+            for (int j = 0; j < unit.ActiveBuffList.Count; j++)
             {
-                BuffBase effect = unit.BuffList[j];
+                BuffBase effect = unit.ActiveBuffList[j];
                 effect.NextTurnStarted(unit);
             }
-            unit.EffectUpdateAction?.Invoke();
+            unit.OnBuffUpdate?.Invoke();
         }
     }
 
@@ -329,7 +328,7 @@ public class BattleManager : MonoSingleton<BattleManager>
         // Iterate over each player unit to find the one with the lowest health
         foreach (var player in PlayerUnits)
         {
-            if (player.GetHP() < lowestHealthPlayer.GetHP())
+            if (player.GetCurrentHP() < lowestHealthPlayer.GetCurrentHP())
             {
                 lowestHealthPlayer = player; // Update to the current player if their health is lower
             }
@@ -356,7 +355,7 @@ public class BattleManager : MonoSingleton<BattleManager>
             case E_TargetType.AllEnemies:
                 foreach(UnitBase _unit in MonsterUnits)
                 {
-                    if (unit.tag != _unit.tag && _unit.isAlive()) tempUnits.Add(_unit);
+                    if (unit.tag != _unit.tag && _unit.IsAlive()) tempUnits.Add(_unit);
                 }
                 break;
             case E_TargetType.Self:
@@ -371,7 +370,7 @@ public class BattleManager : MonoSingleton<BattleManager>
                     do
                     {
                         randomIndex = UnityEngine.Random.Range(0, MonsterUnits.Count); // 무작위 인덱스 생성
-                    } while (!MonsterUnits[randomIndex].isAlive()); // 살아있지 않으면 다시 반복
+                    } while (!MonsterUnits[randomIndex].IsAlive()); // 살아있지 않으면 다시 반복
 
                     // 살아있는 유닛을 tempUnits에 추가
                     tempUnits.Add(MonsterUnits[randomIndex]);
@@ -465,7 +464,7 @@ public class BattleManager : MonoSingleton<BattleManager>
     public IEnumerator ReorganizePlayersWhenDeadCoroutine()
     {
         // 살아있는 캐릭터를 앞으로, 죽은 캐릭터를 뒤로 이동시키기 위해 리스트를 정렬합니다.
-        PlayerUnits.Sort((a, b) => a.isAlive() == b.isAlive() ? 0 : a.isAlive() ? -1 : 1);
+        PlayerUnits.Sort((a, b) => a.IsAlive() == b.IsAlive() ? 0 : a.IsAlive() ? -1 : 1);
 
         // 정렬된 리스트를 바탕으로 위치와 크기를 애니메이션합니다.
         for (int i = 0; i < PlayerUnits.Count; i++)
@@ -475,7 +474,7 @@ public class BattleManager : MonoSingleton<BattleManager>
             // 캐릭터의 목표 위치와 크기를 설정합니다.
             Transform targetTransform = PlayerPozs[i];
             Vector3 targetPosition = targetTransform.position;
-            Vector3 targetScale = Vector3.one * (unit.isAlive() ? (i == 0 ? FrontCharSize : BackCharSize) : BackCharSize);
+            Vector3 targetScale = Vector3.one * (unit.IsAlive() ? (i == 0 ? FrontCharSize : BackCharSize) : BackCharSize);
 
             // 위치와 크기를 애니메이션하기 위한 코루틴 시작
             StartCoroutine(AnimatePositionAndScale(unit, targetPosition, targetScale, PlayerMoveDuration));

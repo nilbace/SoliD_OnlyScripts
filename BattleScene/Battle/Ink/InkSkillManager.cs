@@ -413,7 +413,7 @@ public class InkSkillManager : MonoBehaviour
     {
         foreach (UnitBase unit in BattleManager.Inst.PlayerUnits)
         {
-            if (unit.isAlive())
+            if (unit.IsAlive())
             {
                 StartCoroutine(unit.HealCoroutine(3));
             }

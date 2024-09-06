@@ -11,38 +11,41 @@ using TMPro;
 /// 모든 몬스터와 캐릭터의 공통 뼈대
 /// 베리어, 데미지, 생존 처리등 기본 로직 보유
 /// </summary>
-
 public abstract class UnitBase : MonoBehaviour
 {
-    public string Name;
-    protected int _nowHp;
-    [HideInInspector] public int MaxHP;
-    protected int _barrierAmount;
-    [HideInInspector] public bool IsInjured;
-    [HideInInspector] public bool IsChained;
-    public List<BuffBase> BuffList =new List<BuffBase>();
-    public Action EffectUpdateAction;
+    protected int _currentHp;                   //현재 체력
+    [HideInInspector] public int MaxHP;         //최대 체력
+    protected int _currentBarrier;              //현재 보호막 수치
+    [HideInInspector] public bool IsInjured;    //부상 상태 여부
+    [HideInInspector] public bool IsChained;    //행동 불가 여부
+    public List<BuffBase> ActiveBuffList =new List<BuffBase>(); //적용 버프 목록
+    public Action OnBuffUpdate { get; set; }  //버프 갱신 액션
 
+    //사망시 호출될 델리게이트
     public delegate Sequence OnDeadDelegate();
-    public OnDeadDelegate OnDead;
+    public OnDeadDelegate OnDeath;
 
-    private UnitEffects _unitEffects;
+    private UI_UnitBuffBar _unitEffects;  //버프 표시 UI 관련 스크립트
 
     protected virtual void Awake()
     {
-        _unitEffects = GetComponentInChildren<UnitEffects>();
+        _unitEffects = GetComponentInChildren<UI_UnitBuffBar>();
     }
 
-    public virtual int GetBarrier()
+    public virtual int GetCurrentBarrier()
     {
-        return _barrierAmount;
+        return _currentBarrier;
     }
 
-
+    /// <summary>
+    /// amount만큼 베리어를 획득
+    /// </summary>
+    /// <param name="amount"></param>
+    /// <returns></returns>
     public virtual IEnumerator AddBarrierCoroutine(float amount)
     {
         int intAmount = (int)amount;
-        _barrierAmount += intAmount;
+        _currentBarrier += intAmount;
 
         // Visual effect or delay logic
         if (amount > 0)
@@ -54,40 +57,75 @@ public abstract class UnitBase : MonoBehaviour
         }
     }
 
-
+    /// <summary>
+    /// 베리어 수치를 특정 수치로 갱신
+    /// </summary>
+    /// <param name="amount"></param>
     public virtual void UpdateBarrier(float amount)
     {
         int intAmount = (int)amount;
-        _barrierAmount = intAmount;
+        _currentBarrier = intAmount;
     }
 
-    public void SetNowHpToMaxHP()
+    /// <summary>
+    /// 이펙트 없이 체력을 최대치만큼 회복
+    /// </summary>
+    public void SetHP_To_Max_WithoutVFX()
     {
-        _nowHp = MaxHP;
+        _currentHp = MaxHP;
     }
 
-    public int GetHP()
+    public int GetCurrentHP()
     {
-        return _nowHp;
+        return _currentHp;
     }
 
+    /// <summary>
+    /// 회복 처리 코루틴
+    /// </summary>
+    /// <param name="amount"></param>
+    /// <returns></returns>
+    public IEnumerator HealCoroutine(float amount)
+    {
+        var resultAmount = (int)(HasBuff(E_EffectType.Blessing) ? amount * 1.5f : amount);
+        _currentHp += resultAmount;
+        VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Heal, this);
+        yield return new WaitForSeconds(0.5f);
+    }
+
+    /// <summary>
+    /// 특정 이펙트와 함께 데미지를 받음, 대부분의 상황에서 호출되는 함수
+    /// </summary>
+    /// <param name="amount"></param>
+    /// <param name="effectType"></param>
+    /// <returns></returns>
     public IEnumerator GetDamageCoroutine(float amount, E_EffectType effectType)
     {
         yield return new WaitForEndOfFrame();
-        ProcessDamage(amount, effectType);
+        ApplyDamage(amount, effectType);
     }
 
+    /// <summary>
+    /// CardEffectManager에서 주로 호출하며, 현재 사용중인 카드 효과에 따른 이펙트와 함께 데미지를 받음
+    /// </summary>
+    /// <param name="amount"></param>
+    /// <returns></returns>
     public IEnumerator GetDamageCoroutine(float amount)
     {
         yield return new WaitForEndOfFrame();
-        ProcessDamage(amount, CardEffectManager.NowCardData.DamageEffectType);
+        ApplyDamage(amount, CardEffectManager.CurrentCardData.DamageEffectType);
     }
 
-    protected virtual void ProcessDamage(float amount, E_EffectType effectType)
+    /// <summary>
+    /// 데미지를 받는 과정을 처리하는 함수
+    /// </summary>
+    /// <param name="amount"></param>
+    /// <param name="effectType"></param>
+    protected virtual void ApplyDamage(float amount, E_EffectType effectType)
     {
         // Calculate damage considering vulnerability
         int resultAmount = (int)(HasBuff(E_EffectType.Vulnerability) ? amount * 1.5f : amount);
-        int effectiveBarrier = GetBarrier();
+        int effectiveBarrier = GetCurrentBarrier();
 
         //베리어 체크
         if (effectiveBarrier > 0)
@@ -96,13 +134,13 @@ public abstract class UnitBase : MonoBehaviour
 
             if (effectiveBarrier < 0)
             {
-                _nowHp += effectiveBarrier; // Reduce HP by the overflow damage
+                _currentHp += effectiveBarrier; // Reduce HP by the overflow damage
                 effectiveBarrier = 0;
             }
         }
         else
         {
-            _nowHp -= resultAmount;
+            _currentHp -= resultAmount;
         }
 
         // Update the barrier in the derived classes
@@ -110,12 +148,12 @@ public abstract class UnitBase : MonoBehaviour
 
         // Trigger visual effect for damage
         VisualEffectManager.Inst.InstantiateEffect(effectType, this);
-        Debug.Log($"{gameObject.name} took {resultAmount} damage. Barrier: {effectiveBarrier}, HP: {_nowHp}");
+        Debug.Log($"{gameObject.name} took {resultAmount} damage. Barrier: {effectiveBarrier}, HP: {_currentHp}");
 
         // Check if the character is dead
-        if (_nowHp <= 0)
+        if (_currentHp <= 0)
         {
-            StartCoroutine(DeadCoroutine());
+            StartCoroutine(DeathCoroutine());
         }
     }
 
@@ -124,75 +162,105 @@ public abstract class UnitBase : MonoBehaviour
     private void ApplyBuff(BuffBase effect)
     {
         effect.ApplyEffect(this);
-        EffectUpdateAction?.Invoke();
+        OnBuffUpdate?.Invoke();
     }
 
   
 
     public void RemoveBuff(E_EffectType type)
     {
-        for (int i = 0; i < BuffList.Count; i++)
+        for (int i = 0; i < ActiveBuffList.Count; i++)
         {
-            if (BuffList[i].BuffType == type)
+            if (ActiveBuffList[i].BuffType == type)
             {
                 // 효과 제거
-                BuffList.RemoveAt(i);
-                EffectUpdateAction?.Invoke();
+                ActiveBuffList.RemoveAt(i);
+                OnBuffUpdate?.Invoke();
                 break; // 버프를 하나만 제거한 후 종료
             }
         }
     }
 
+    /// <summary>
+    /// 특정 버프 아이콘 강조 효과
+    /// </summary>
+    /// <param name="type"></param>
     public void TwinkleBuffIcon(E_EffectType type)
     {
         if(HasBuff(type, out BuffBase buffObject))
         {
-            var buffindex = BuffList.IndexOf(buffObject);
+            var buffindex = ActiveBuffList.IndexOf(buffObject);
             _unitEffects.TwinkleIcion(buffindex);
         }
     }
 
+    /// <summary>
+    /// 해당 버프를 amount스택만큼 받음
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="amount"></param>
+    /// <returns></returns>
     public virtual IEnumerator ApplyBuffCoroutine(E_EffectType type, float amount)
     {
-        if (!isAlive()) yield break;
+        if (!IsAlive()) yield break;
         Debug.Log($"{gameObject.name} 에게 {type}을 {amount} 만큼 부여");
         ApplyBuff(BuffFactory.GetBuffByType(type, amount));
         VisualEffectManager.Inst.InstantiateEffect(type, this);
         yield return new WaitForSeconds(0.5f);
     }
 
+    /// <summary>
+    /// 해당 버프를 가지고 있는지 확인
+    /// </summary>
+    /// <param name="effectType"></param>
+    /// <returns></returns>
     public bool HasBuff(E_EffectType effectType)
     {
-        var effect = BuffList.FirstOrDefault(e => e.BuffType == effectType);
-        return effect != null;
-    }
-    public bool HasBuff(E_EffectType effectType, out BuffBase effect)
-    {
-        effect = BuffList.FirstOrDefault(e => e.BuffType == effectType);
+        var effect = ActiveBuffList.FirstOrDefault(e => e.BuffType == effectType);
         return effect != null;
     }
 
+    /// <summary>
+    /// 해당 버프를 가지고 있는지 확인하며 out키워드로 해당 버프 반환
+    /// </summary>
+    /// <param name="effectType"></param>
+    /// <param name="effect"></param>
+    /// <returns></returns>
+    public bool HasBuff(E_EffectType effectType, out BuffBase effect)
+    {
+        effect = ActiveBuffList.FirstOrDefault(e => e.BuffType == effectType);
+        return effect != null;
+    }
+
+    /// <summary>
+    /// 하나 이상의 디버프를 가지고 있는지 확인
+    /// </summary>
+    /// <returns></returns>
     public bool HasDebuff()
     {
         // ActiveEffectList에 IsDebuff가 true인 항목이 있는지 확인합니다.
-        return BuffList.Any(effect => effect.IsDebuff);
+        return ActiveBuffList.Any(effect => effect.IsDebuff);
     }
 
 
-    public void ClearStatusEffect()
+    public void ClearAllBuffs()
     {
-        BuffList.Clear();
-        EffectUpdateAction?.Invoke();
+        ActiveBuffList.Clear();
+        OnBuffUpdate?.Invoke();
     }
 
  
    
-    public bool isAlive()
+    public bool IsAlive()
     {
-        return _nowHp > 0;
+        return _currentHp > 0;
     }
 
-    public virtual IEnumerator DeadCoroutine()
+    /// <summary>
+    /// 사망 처리 코루틴
+    /// </summary>
+    /// <returns></returns>
+    public virtual IEnumerator DeathCoroutine()
     {
         Debug.Log(gameObject.name + " 사망");
 
@@ -225,7 +293,7 @@ public abstract class UnitBase : MonoBehaviour
         yield return new WaitForSeconds(1f);
     }
 
-    // Fade out a SpriteRenderer over time
+    //SpriteRenderer 페이드 아웃
     private IEnumerator FadeOut(SpriteRenderer spriteRenderer)
     {
         float duration = 1f;
@@ -242,7 +310,7 @@ public abstract class UnitBase : MonoBehaviour
         spriteRenderer.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
     }
 
-    // Fade out an Image over time
+    //Image 페이드 아웃
     private IEnumerator FadeOut(Image image)
     {
         float duration = 1f;
@@ -259,7 +327,7 @@ public abstract class UnitBase : MonoBehaviour
         image.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
     }
 
-    // Fade out a TMP_Text over time
+    //TMP_Text 페이드 아웃
     private IEnumerator FadeOut(TMP_Text tmpText)
     {
         float duration = 1f;
@@ -275,25 +343,4 @@ public abstract class UnitBase : MonoBehaviour
         }
         tmpText.color = new Color(initialColor.r, initialColor.g, initialColor.b, 0f);
     }
-
-
-    public IEnumerator HealCoroutine(float amount)
-    {
-        var resultAmount = (int)(HasBuff(E_EffectType.Blessing) ? amount * 1.5f : amount);
-        _nowHp += resultAmount;
-        VisualEffectManager.Inst.InstantiateEffect(E_EffectType.Heal, this);
-        yield return new WaitForSeconds(0.5f);
-    }
-    
-    [ContextMenu("Show Active Effects")]
-    private void ShowActiveEffects()
-    {
-        // 현재 활성화된 이펙트를 표시합니다.
-        foreach (BuffBase effect in BuffList)
-        {
-            Debug.Log($"Effect Type: {effect.BuffType}, Duration: {effect.Duration}, Stack: {effect.Stack}, InfoText: {effect.InfoText}");
-        }
-    }
-
-
-}
+ }

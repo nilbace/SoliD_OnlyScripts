@@ -24,7 +24,7 @@ public class PlayableUnit : UnitBase
         }
         yield return base.ApplyBuffCoroutine(type, amount);
     }
-    public override int GetBarrier()
+    public override int GetCurrentBarrier()
     {
         return s_sharedBarrier;
     }
@@ -50,7 +50,7 @@ public class PlayableUnit : UnitBase
     }
     protected virtual void Start()
     {
-        MaxHP = 20; SetNowHpToMaxHP();
+        MaxHP = 20; SetHP_To_Max_WithoutVFX();
         BattleManager.Inst.PlayerUnits.Add(this);
         if (BattleManager.Inst.PlayerUnits.Count == 3)
         {
@@ -58,9 +58,9 @@ public class PlayableUnit : UnitBase
         }
     }
 
-    public override IEnumerator DeadCoroutine()
+    public override IEnumerator DeathCoroutine()
     {
-        yield return StartCoroutine(base.DeadCoroutine());
+        yield return StartCoroutine(base.DeathCoroutine());
         yield return StartCoroutine(BattleManager.Inst.ReorganizePlayersWhenDeadCoroutine());
     }
 }

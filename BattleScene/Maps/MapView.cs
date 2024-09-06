@@ -20,42 +20,45 @@ namespace Map
         public MapOrientation orientation;
         public float mapSize;
 
-        [Tooltip(
-            "List of all the MapConfig scriptable objects from the Assets folder that might be used to construct maps. " +
-            "Similar to Acts in Slay The Spire (define general layout, types of bosses.)")]
+        [Tooltip("Assets 폴더의 모든 MapConfig 스크립터블 오브젝트 목록, 반드시 전부 포함해야 함")]
         public List<MapConfig> allMapConfigs;
         public GameObject nodePrefab;
-        [Tooltip("Offset of the start/end nodes of the map from the edges of the screen")]
+        [Tooltip("맵의 시작/끝 노드가 화면 가장자리로부터의 오프셋")]
         public float orientationOffset;
         [Header("Background Settings")]
         public GameObject PannelPrefab;
-        [Tooltip("If the background sprite is null, background will not be shown")]
+        [Tooltip("배경 스프라이트가 null이면 배경이 표시되지 않음")]
         public Sprite background;
         public Color32 backgroundColor = Color.white;
         public float xSize;
-        public float yOffset;
+        [Tooltip("최하단 노드와 최상단 노드에서 추가 상하 간격")]
+        public float MapVerticalMargin;
+        [Tooltip("미니맵 배경 Y축 Offset값")]
+        public float BackgroundYOffset;
+        [Tooltip("미니맵 전체 Y축 Offset값")]
+        public float MapYOffset;
+
         [Header("Line Settings")]
         public GameObject linePrefab;
-        [Tooltip("Line point count should be > 2 to get smooth color gradients")]
         [Range(3, 10)]
         public int linePointsCount = 10;
-        [Tooltip("Distance from the node till the line starting point")]
+        [Tooltip("노드에서 라인의 시작 지점까지의 거리")]
         public float offsetFromNodes = 0.5f;
         [Header("Colors")]
-        [Tooltip("Node Visited or Attainable color")]
+        [Tooltip("방문된 노드 또는 도달 가능한 노드 색상")]
         public Color32 visitedColor = Color.white;
-        [Tooltip("Locked node color")]
+        [Tooltip("잠긴 노드 색상")]
         public Color32 lockedColor = Color.gray;
-        [Tooltip("Visited or available path color")]
+        [Tooltip("방문한 경로 또는 사용 가능한 경로 색상")]
         public Color32 lineVisitedColor = Color.white;
-        [Tooltip("Unavailable path color")]
+        [Tooltip("사용할 수 없는 경로 색상")]
         public Color32 lineLockedColor = Color.gray;
 
         protected GameObject firstParent;
         protected GameObject mapParent;
         private List<List<Point>> paths;
         private Camera cam;
-        // ALL nodes:
+        //모든 노드들
         public readonly List<MapNode> MapNodes = new List<MapNode>();
         protected readonly List<LineConnection> lineConnections = new List<LineConnection>();
 
@@ -67,10 +70,13 @@ namespace Map
 
         private void Awake()
         {
-            Inst = this;
-            cam = Camera.main;
+            Inst = this;        //인스턴스 초기화
+            cam = Camera.main;  //메인 카메라 참조
         }
 
+        /// <summary>
+        /// 맵을 초기화하고 부모 오브젝트를 삭제
+        /// </summary>
         protected virtual void ClearMap()
         {
             if (firstParent != null)
@@ -117,6 +123,9 @@ namespace Map
             HideMap();
         }
 
+        /// <summary>
+        /// 맵 배경을 생성합니다.
+        /// </summary>
         protected virtual void CreateMapBackground(Map m)
         {
             if (background == null) return;
@@ -125,18 +134,18 @@ namespace Map
             backgroundObject.transform.SetParent(mapParent.transform);
             var bossNode = MapNodes.FirstOrDefault(node => node.Node.nodeType == NodeType.Boss);
             var span = m.DistanceBetweenFirstAndLastLayers();
-            backgroundObject.transform.localPosition = new Vector3(bossNode.transform.localPosition.x, span / 2f, 0f);
+            backgroundObject.transform.localPosition = new Vector3(bossNode.transform.localPosition.x, span / 2f + BackgroundYOffset, 0f);
             backgroundObject.transform.localRotation = Quaternion.identity;
             var sr = backgroundObject.AddComponent<SpriteRenderer>();
             sr.color = backgroundColor;
             sr.drawMode = SpriteDrawMode.Sliced;
             sr.sprite = background;
-            sr.size = new Vector2(xSize, span + yOffset * 2f);
-            sr.gameObject.transform.localPosition += Vector3.up * MapYOffsetTONodes;
+            sr.size = new Vector2(xSize, span + MapVerticalMargin * 2f);
         }
 
-        public float MapYOffsetTONodes;
-
+        /// <summary>
+        /// 맵의 부모 오브젝트를 생성합니다.
+        /// </summary>
         protected virtual void CreateMapParent()
         {
             firstParent = new GameObject("OuterMapParent");
@@ -151,6 +160,9 @@ namespace Map
             Instantiate(PannelPrefab, firstParent.transform);
         }
 
+        /// <summary>
+        /// 노드들을 생성합니다.
+        /// </summary>
         protected void CreateNodes(IEnumerable<Node> nodes)
         {
             foreach (var node in nodes)
@@ -160,6 +172,9 @@ namespace Map
             }
         }
 
+        /// <summary>
+        /// 단일 노드를 생성합니다.
+        /// </summary>
         protected virtual MapNode CreateMapNode(Node node)
         {
             var mapNodeObject = Instantiate(nodePrefab, mapParent.transform);
@@ -176,19 +191,19 @@ namespace Map
         /// </summary>
         public void SetAttainableNodes()
         {
-            // first set all the nodes as unattainable/locked:
+            // 모든 노드를 처음에는 잠김 상태로 설정
             foreach (var node in MapNodes)
                 node.SetState(NodeStates.Locked);
 
             if (mapManager.CurrentMap.path.Count == 0)
             {
-                // we have not started traveling on this map yet, set entire first layer as attainable:
+                // 맵에서 아직 이동을 시작하지 않았을 경우, 첫 번째 레이어의 모든 노드를 도달 가능 상태로 설정
                 foreach (var node in MapNodes.Where(n => n.Node.point.y == 0))
                     node.SetState(NodeStates.Attainable);
             }
             else
             {
-                // we have already started moving on this map, first highlight the path as visited:
+                // 맵에서 이미 이동을 시작한 경우, 경로를 먼저 방문된 상태로 설정
                 foreach (var point in mapManager.CurrentMap.path)
                 {
                     var mapNode = GetNode(point);
@@ -199,7 +214,7 @@ namespace Map
                 var currentPoint = mapManager.CurrentMap.path[mapManager.CurrentMap.path.Count - 1];
                 var currentNode = mapManager.CurrentMap.GetNode(currentPoint);
 
-                // set all the nodes that we can travel to as attainable:
+                // 이동할 수 있는 모든 노드를 도달 가능 상태로 설정
                 foreach (var point in currentNode.outgoing)
                 {
                     var mapNode = GetNode(point);
@@ -211,16 +226,15 @@ namespace Map
 
         public virtual void SetLineColors()
         {
-            // set all lines to grayed out first:
+            // 모든 라인을 먼저 잠긴 색상으로 설정
             foreach (var connection in lineConnections)
                 connection.SetColor(lineLockedColor);
 
-            // set all lines that are a part of the path to visited color:
-            // if we have not started moving on the map yet, leave everything as is:
+            // 탐색이 시작되지 않았다면 라인 색상을 그대로 유지
             if (mapManager.CurrentMap.path.Count == 0)
                 return;
 
-            // in any case, we mark outgoing connections from the final node with visible/attainable color:
+            // 마지막 노드의 outgoing 연결을 도달 가능 색상으로 설정
             var currentPoint = mapManager.CurrentMap.path[mapManager.CurrentMap.path.Count - 1];
             var currentNode = mapManager.CurrentMap.GetNode(currentPoint);
 
@@ -243,14 +257,15 @@ namespace Map
             }
         }
 
+        /// <summary>
+        /// 맵의 방향(세로, 가로)에 맞춰 미니맵을 생성
+        /// </summary>
         protected virtual void SetOrientation()
         {
             var scrollNonUi = mapParent.GetComponent<ScrollNonUI>();
             var span = mapManager.CurrentMap.DistanceBetweenFirstAndLastLayers();
             var bossNode = MapNodes.FirstOrDefault(node => node.Node.nodeType == NodeType.Boss);
-            //Debug.Log("Map span in set orientation: " + span + " camera aspect: " + cam.aspect);
 
-            // setting first parent to be right in front of the camera first:
             firstParent.transform.position = new Vector3(cam.transform.position.x, cam.transform.position.y, 0f);
             var offset = orientationOffset;
             switch (orientation)
@@ -270,13 +285,11 @@ namespace Map
                         scrollNonUi.yConstraints.min = 0;
                         scrollNonUi.yConstraints.max = span + 2f * offset;
                     }
-                    // factor in map span:
                     firstParent.transform.localPosition += new Vector3(0, -offset, 0);
                     break;
                 case MapOrientation.RightToLeft:
                     offset *= cam.aspect;
                     mapParent.transform.eulerAngles = new Vector3(0, 0, 90);
-                    // factor in map span:
                     firstParent.transform.localPosition -= new Vector3(offset, bossNode.transform.position.y, 0);
                     if (scrollNonUi != null)
                     {
@@ -299,6 +312,9 @@ namespace Map
             }
         }
 
+        /// <summary>
+        /// 노드들 사이의 라인을 그립니다.
+        /// </summary>
         private void DrawLines()
         {
             foreach (var node in MapNodes)
@@ -308,12 +324,20 @@ namespace Map
             }
         }
 
+        /// <summary>
+        /// 모든 노드의 회전을 초기화합니다.
+        /// </summary>
         private void ResetNodesRotation()
         {
             foreach (var node in MapNodes)
                 node.transform.rotation = Quaternion.identity;
         }
 
+        /// <summary>
+        /// 두 노드 간에 라인 연결을 추가합니다.
+        /// </summary>
+        /// <param name="from">시작 노드</param>
+        /// <param name="to">끝 노드</param>
         protected virtual void AddLineConnection(MapNode from, MapNode to)
         {
             if (linePrefab == null) return;
@@ -326,11 +350,9 @@ namespace Map
             var toPoint = to.transform.position +
                           (from.transform.position - to.transform.position).normalized * offsetFromNodes;
 
-            // drawing lines in local space:
             lineObject.transform.position = fromPoint;
             lineRenderer.useWorldSpace = false;
 
-            // line renderer with 2 points only does not handle transparency properly:
             lineRenderer.positionCount = linePointsCount;
             for (var i = 0; i < linePointsCount; i++)
             {
@@ -366,21 +388,26 @@ namespace Map
             return config.nodeBlueprints.FirstOrDefault(n => n.name == blueprintName);
         }
 
+        /// <summary>
+        /// 맵을 중앙으로 이동시킵니다. 보스 노드의 X 위치를 기준으로 중앙으로 이동하고, Y축으로 추가 이동합니다.
+        /// </summary>
         public void MoveToCenter()
         {
             var bossNode = MapNodes.FirstOrDefault(node => node.Node.nodeType == NodeType.Boss);
             float bossNodePozX = bossNode.gameObject.transform.position.x;
             mapParent.transform.position += new Vector3(-bossNodePozX, 0, 0);
-            firstParent.transform.position += Vector3.up * yOffset * MapExtraYOffset;
+            firstParent.transform.position += Vector3.up * MapVerticalMargin * MapYOffset;
         }
 
-        public float MapExtraYOffset;
 
+        /// <summary>
+        /// 정렬 레이어를 설정합니다. 렌더러와 캔버스의 정렬 레이어를 "Map"으로 설정합니다.
+        /// </summary>
         public void SetSortingLayer()
         {
             var parenttr = mapParent.transform;
             Renderer[] SRs = parenttr.GetComponentsInChildren<Renderer>();
-            foreach(Renderer SR in SRs)
+            foreach (Renderer SR in SRs)
             {
                 SR.sortingLayerName = "Map";
             }
@@ -393,6 +420,10 @@ namespace Map
 
         }
 
+
+        /// <summary>
+        /// 맵을 표시합니다. 첫 번째 부모를 활성화하고 모든 자식에 대해 페이드 인 효과를 적용합니다.
+        /// </summary>
         public void ShowMap()
         {
             firstParent.SetActive(true);
@@ -420,12 +451,18 @@ namespace Map
             isHide = false;
         }
 
+        /// <summary>
+        /// 맵을 숨깁니다. 첫 번째 부모를 비활성화합니다.
+        /// </summary>
         public void HideMap()
         {
             firstParent.gameObject.SetActive(false);
             isHide = true;
         }
 
+        /// <summary>
+        /// 현재 숨김 상태에 따라 맵을 표시하거나 숨깁니다.
+        /// </summary>
         public void MapBTN()
         {
             if (isHide) ShowMap();
@@ -444,6 +481,10 @@ namespace Map
             }
         }
 
+        /// <summary>
+        /// 레이어를 설정합니다.
+        /// </summary>
+        /// <param name="firstParent">첫 번째 부모 오브젝트</param>
         void SetLayerForParentAndChildren(GameObject firstParent)
         {
             int layer = LayerMask.NameToLayer("Mystery&ETC");

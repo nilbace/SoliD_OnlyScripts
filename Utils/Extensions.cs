@@ -23,7 +23,7 @@ public static class Extensions
     {
         if (unit != null)
         {
-            slider.value = Mathf.Clamp(((float)unit.GetHP() / (float)unit.MaxHP), 0.045f, 1f);
+            slider.value = Mathf.Clamp(((float)unit.GetCurrentHP() / (float)unit.MaxHP), 0.045f, 1f);
         }
     }
 }

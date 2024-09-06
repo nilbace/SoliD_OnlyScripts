@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// 뽑을 카드 뭉치와 버린 카드 뭉치를 관리하는 클래스
+/// </summary>
 public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
 {
     public List<CardData> DrawPile = new List<CardData>();
@@ -24,20 +27,34 @@ public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
         TMP_DiscardPileCount.text = DiscardPile.Count.ToString();
     }
 
+    /// <summary>
+    /// 뽑을 카드 뭉치를 순서대로 보여주지 않고 랜덤 순서로 보여줌
+    /// </summary>
     public void ShowDrawPile()
     {
         UI_CardOverView.Inst.ShowOverview(E_CardOverviewType.DrawPile);
     }
+
+    /// <summary>
+    /// 버린 카드 뭉치를 순서대로 보여줌
+    /// </summary>
     public void ShowDiscardPile()
     {
         UI_CardOverView.Inst.ShowOverview(E_CardOverviewType.DiscardPile);
     }
+
+    /// <summary>
+    /// 게임 시작시 기본 덱을 생성함
+    /// </summary>
     public void MakeBaseDeck()
     {
         Debug.Log("덱 생성 완료");
         TrialManager.Inst.AddCard(GameManager.Card_RelicContainer.GetBaseDeck());
     }
 
+    /// <summary>
+    /// 전투가 시작하면 유저 덱을 깊은 복사를 통해 복제하여 사용함
+    /// </summary>
     public void SetUpPiles()
     {
         DrawPile = new List<CardData>(TrialManager.Inst.UserDeck);
@@ -45,6 +62,10 @@ public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
         DiscardPile = new List<CardData>();
     }
 
+    /// <summary>
+    /// 카드를 한장 뽑아서 그 데이터를 반환
+    /// </summary>
+    /// <returns>뽑을 카드 뭉치에서 가장 위에 있는 데이터</returns>
     public CardData DrawCard()
     {
         if (DrawPile.Count > 0)
@@ -75,6 +96,10 @@ public class Deck_GraveManager : MonoSingleton<Deck_GraveManager>
         return newTopCard;
     }
 
+    /// <summary>
+    /// 카드 List를 섞는 함수
+    /// </summary>
+    /// <param name="cards"></param>
     private void Shuffle(List<CardData> cards)
     {
         System.Random rng = new System.Random();

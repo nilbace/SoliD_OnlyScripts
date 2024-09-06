@@ -3,11 +3,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
+/// <summary>
+/// Naninovel에셋을 관리
+/// </summary>
 public class NovelManager
 {
     public Camera MainCam;
 
+    /// <summary>
+    /// 나니노벨 엔진 실행시 필요한 로직들을 추가적으로 설정함
+    /// 
+    /// 현재 추가 로직 목록
+    /// 1.카메라 CullingMask관리(미니맵이나 카드 등을 보이지 않게 하기 위함)
+    /// </summary>
     [RuntimeInitializeOnLoadMethod]
     private static void ModifyConfig()
     {
@@ -48,14 +56,17 @@ public class NovelManager
         }
     }
 
+    /// <summary>
+    /// 특정 이름의 이야기를 시작
+    /// </summary>
+    /// <param name="e_StoryType"></param>
     public void StartStory(E_MysteryType e_StoryType)
     {
         StartStory(e_StoryType.ToString());
     }
 
-    public async void StartStory(string storyName)
+    private async void StartStory(string storyName)
     {
-        // 2. Switch cameras.
         var naniCamera = Engine.GetService<ICameraManager>().Camera;
         naniCamera.enabled = true;
         var uiCamera = Engine.GetService<ICameraManager>().UICamera;
@@ -67,7 +78,6 @@ public class NovelManager
         var scriptPlayer = Engine.GetService<IScriptPlayer>();
         await scriptPlayer.PreloadAndPlayAsync(storyName);
 
-        // 4. Enable Naninovel input.
         var inputManager = Engine.GetService<IInputManager>();
         inputManager.ProcessInput = true;
 
@@ -77,11 +87,10 @@ public class NovelManager
     }
 
     [CommandAlias("closeStory")]
-    public class SwitchToAdventureMode : Command
+    public class CloseStory : Command
     {
         public override async UniTask ExecuteAsync(AsyncToken asyncToken)
         {
-            // 1. Disable Naninovel input.
             var inputManager = Engine.GetService<IInputManager>();
             inputManager.ProcessInput = false;
 
@@ -92,15 +101,12 @@ public class NovelManager
             var uiCamera = Engine.GetService<ICameraManager>().UICamera;
             uiCamera.enabled = false;
 
-            // 2. Stop script player.
             var scriptPlayer = Engine.GetService<IScriptPlayer>();
             scriptPlayer.Stop();
 
-            // 3. Reset state.
             var stateManager = Engine.GetService<IStateManager>();
             await stateManager.ResetStateAsync();
 
-            // 4. Switch cameras.
             var canvasGroup = GameObject.Find("UI").GetComponent<CanvasGroup>();
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
@@ -109,7 +115,7 @@ public class NovelManager
 
     public async UniTask CallSwitchToAdventureMode()
     {
-        var switchToAdventureMode = new SwitchToAdventureMode();
-        await switchToAdventureMode.ExecuteAsync(default);
+        var closeStory = new CloseStory();
+        await closeStory.ExecuteAsync(default);
     }
 }

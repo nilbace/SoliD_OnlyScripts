@@ -20,7 +20,7 @@ public abstract class MonsterBase : UnitBase
     public virtual void Start()
     {
         _playerInks = new E_CardColor[2];
-        MaxHP = StartHP; SetNowHpToMaxHP();
+        MaxHP = StartHP; SetHP_To_Max_WithoutVFX();
     }
 
     public virtual void SetIntent()
@@ -33,12 +33,12 @@ public abstract class MonsterBase : UnitBase
         SR_Intent.DOFade(0, 0.4f);
     }
 
-    protected override void ProcessDamage(float amount, E_EffectType effectType)
+    protected override void ApplyDamage(float amount, E_EffectType effectType)
     {
         float damageMagnitude = TrialManager.Inst.HasRelic(E_RelicType.RippedDoll) ? 1.75f : 1.5f;
         int resultAmount = (int)(HasBuff(E_EffectType.Vulnerability) ? amount * damageMagnitude : amount);
 
-        int effectiveBarrier = GetBarrier();
+        int effectiveBarrier = GetCurrentBarrier();
 
         //베리어 체크
         if (effectiveBarrier > 0)
@@ -47,13 +47,13 @@ public abstract class MonsterBase : UnitBase
 
             if (effectiveBarrier < 0)
             {
-                _nowHp += effectiveBarrier; // Reduce HP by the overflow damage
+                _currentHp += effectiveBarrier; // Reduce HP by the overflow damage
                 effectiveBarrier = 0;
             }
         }
         else
         {
-            _nowHp -= resultAmount;
+            _currentHp -= resultAmount;
         }
 
         // Update the barrier in the derived classes
@@ -61,18 +61,18 @@ public abstract class MonsterBase : UnitBase
 
         // Trigger visual effect for damage
         VisualEffectManager.Inst.InstantiateEffect(effectType, this);
-        Debug.Log($"{gameObject.name} took {resultAmount} damage. Barrier: {effectiveBarrier}, HP: {_nowHp}");
+        Debug.Log($"{gameObject.name} took {resultAmount} damage. Barrier: {effectiveBarrier}, HP: {_currentHp}");
 
         // Check if the character is dead
-        if (_nowHp <= 0)
+        if (_currentHp <= 0)
         {
-            StartCoroutine(DeadCoroutine());
+            StartCoroutine(DeathCoroutine());
         }
     }
 
     public IEnumerator AddInk(E_CardColor color)
     {
-        if (!isAlive()) yield break;
+        if (!IsAlive()) yield break;
         Color nowColor = GetColor(color);
 
         // 색을 처음 칠한다면
@@ -142,7 +142,7 @@ public abstract class MonsterBase : UnitBase
     public IEnumerator AttackCoroutine(float amount)
     {
         float resultDamage = amount;
-        foreach (BuffBase buff in BuffList)
+        foreach (BuffBase buff in ActiveBuffList)
         {
             if (buff.isDealerBuff)
             {

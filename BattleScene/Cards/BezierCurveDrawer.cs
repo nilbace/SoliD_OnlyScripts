@@ -2,6 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// 카드와 몬스터 사이에 적절한 조준선을 그려주는 클래스
+/// </summary>
 public class BezierCurveDrawer : MonoBehaviour
 {
     public static BezierCurveDrawer Inst;
